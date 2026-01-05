@@ -1,10 +1,10 @@
-# 1. Etapa de Construção
-FROM maven:3.8.5-openjdk-17 AS build
+# 1. Etapa de Construção (Usando Maven com Java 21)
+FROM maven:3.9.6-eclipse-temurin-21 AS build
 COPY . .
 RUN mvn clean package -DskipTests
 
-# 2. Etapa de Execução (Trocamos a imagem aqui)
-FROM eclipse-temurin:17-jdk
+# 2. Etapa de Execução (Usando Java 21)
+FROM eclipse-temurin:21-jdk
 COPY --from=build /target/*.jar app.jar
 EXPOSE 8080
 ENTRYPOINT ["java", "-jar", "app.jar"]
