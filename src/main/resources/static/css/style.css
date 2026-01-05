@@ -1,0 +1,327 @@
+/* Tema Verde Oliva - Exército Brasileiro */
+:root {
+    --verde-oliva-escuro: #344032; /* Quase preto */
+    --verde-oliva-principal: #556B2F; /* Verde Oliva Clássico */
+    --verde-oliva-medio: #6B8E23; /* Verde Oliva Médio */
+    --verde-claro: #F0F5E8; /* Um "bege" esverdeado/claro */
+    --texto-claro: #FFFFFF;
+    --texto-escuro: #333333;
+    --borda-arredondada: 8px;
+    --sombra-suave: 0 4px 6px rgba(0, 0, 0, 0.1);
+    
+    /* Variáveis para o Efeito Vidro */
+    --vidro-fundo: rgba(255, 255, 255, 0.85); /* Branco com 85% de opacidade */
+    --vidro-borda: 1px solid rgba(255, 255, 255, 0.5);
+    --vidro-blur: blur(10px);
+}
+
+body {
+    font-family: 'Arial', sans-serif;
+    margin: 0;
+    padding: 0;
+    color: var(--texto-escuro);
+    
+    /* --- IMAGEM DE FUNDO --- */
+    background-image: url('https://www.transparenttextures.com/patterns/camouflage.png'), linear-gradient(135deg, #556B2F 0%, #2F4F4F 100%);
+    background-size: auto, cover;
+    background-attachment: fixed;
+    background-position: center;
+    min-height: 100vh;
+}
+
+/* --- Cabeçalho com Efeito Vidro --- */
+.header {
+    background-color: rgba(52, 64, 50, 0.9);
+    color: var(--texto-claro);
+    padding: 0.8rem 2rem; /* Levemente menor para ficar mais elegante */
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    box-shadow: var(--sombra-suave);
+    
+    backdrop-filter: blur(5px);
+    -webkit-backdrop-filter: blur(5px);
+    
+    position: sticky;
+    top: 0;
+    z-index: 1000;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.header .logo {
+    font-size: 1.4rem;
+    font-weight: bold;
+    text-transform: uppercase;
+    letter-spacing: 1.5px;
+    text-shadow: 0 2px 4px rgba(0,0,0,0.3);
+}
+
+/* ESTILIZAÇÃO DOS LINKS DO MENU */
+.header nav a {
+    color: rgba(255, 255, 255, 0.9);
+    text-decoration: none;
+    margin-left: 0.5rem;
+    padding: 0.6rem 1rem; /* Área clicável maior */
+    font-weight: 500;
+    font-size: 0.95rem;
+    border-radius: 20px; /* Borda arredondada tipo "pílula" */
+    transition: all 0.3s ease; /* Transição suave */
+    border: 1px solid transparent; /* Evita que o layout pule ao adicionar borda no hover */
+}
+
+/* Efeito ao passar o rato (Hover) */
+.header nav a:hover {
+    color: #fff;
+    background-color: rgba(255, 255, 255, 0.15); /* Fundo branco transparente */
+    border-color: rgba(255, 255, 255, 0.2);
+    text-decoration: none;
+    transform: translateY(-2px); /* Leve elevação */
+    box-shadow: 0 4px 8px rgba(0,0,0,0.2); /* Sombra para dar profundidade */
+}
+
+/* Link Ativo (simulação visual) */
+.header nav a.active {
+    background-color: var(--verde-oliva-principal);
+    color: white;
+}
+
+/* --- Container Principal --- */
+.main-container {
+    padding: 2rem;
+    max-width: 1400px;
+    margin: 0 auto;
+}
+
+/* --- Cartões (Cards) --- */
+.card {
+    background-color: var(--vidro-fundo);
+    backdrop-filter: var(--vidro-blur);
+    -webkit-backdrop-filter: var(--vidro-blur);
+    border: var(--vidro-borda);
+    border-radius: var(--borda-arredondada);
+    box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.15);
+    padding: 1.5rem;
+    margin-bottom: 2rem;
+}
+
+.card-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-bottom: 2px solid rgba(85, 107, 47, 0.2);
+    padding-bottom: 1rem;
+    margin-bottom: 1.5rem;
+}
+
+.card-header h2 {
+    margin: 0;
+    color: var(--verde-oliva-principal);
+    font-size: 1.5rem;
+}
+
+/* --- Botões --- */
+.btn-primary {
+    background-color: var(--verde-oliva-principal);
+    color: var(--texto-claro);
+    padding: 0.6rem 1.2rem;
+    border-radius: var(--borda-arredondada);
+    text-decoration: none;
+    font-weight: 600;
+    border: none;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+}
+
+.btn-primary:hover {
+    background-color: var(--verde-oliva-medio);
+    transform: translateY(-1px);
+    box-shadow: 0 4px 6px rgba(0,0,0,0.2);
+}
+
+/* --- Tabelas --- */
+.escala-table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+.escala-table th,
+.escala-table td {
+    padding: 1rem;
+    text-align: left;
+    border-bottom: 1px solid rgba(0,0,0,0.05);
+}
+
+.escala-table th {
+    background-color: rgba(52, 64, 50, 0.1);
+    color: var(--verde-oliva-escuro);
+    font-weight: 700;
+    text-transform: uppercase;
+    font-size: 0.85rem;
+    letter-spacing: 0.5px;
+}
+
+.escala-table tr:hover {
+    background-color: rgba(85, 107, 47, 0.1);
+}
+
+.escala-table tr.proximo-na-escala td:first-child {
+    font-weight: bold;
+    color: var(--verde-oliva-principal);
+    border-left: 4px solid var(--verde-oliva-principal);
+}
+
+/* --- Badges --- */
+.badge {
+    padding: 0.35em 0.65em;
+    font-size: 0.85em;
+    font-weight: 700;
+    border-radius: 0.25rem;
+    color: #fff;
+    display: inline-block;
+    text-align: center;
+    min-width: 80px;
+    box-shadow: 0 2px 2px rgba(0,0,0,0.1);
+}
+.badge-success { background-color: #28a745; }
+.badge-warning { background-color: #ffc107; color: #212529; }
+.badge-info { background-color: #17a2b8; }
+
+/* --- Botões de Ação Pequenos --- */
+.btn-acao {
+    width: 100%;
+    padding: 0.4rem 0.5rem;
+    font-size: 0.85rem;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    color: white;
+    font-weight: 600;
+    transition: opacity 0.2s;
+    margin-bottom: 2px;
+}
+.btn-acao:hover { opacity: 0.9; }
+.btn-queimar { background-color: #dc3545; }
+.btn-limpar { background-color: #6c757d; }
+
+/* --- Login Box --- */
+.login-container {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-height: 100vh;
+}
+
+.login-box {
+    background-color: rgba(255, 255, 255, 0.9);
+    padding: 2.5rem;
+    border-radius: var(--borda-arredondada);
+    box-shadow: 0 15px 35px rgba(0,0,0,0.2);
+    width: 100%;
+    max-width: 400px;
+    text-align: center;
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    border: 1px solid rgba(255,255,255,0.5);
+}
+
+.login-box h1 {
+    color: var(--verde-oliva-principal);
+    margin-bottom: 2rem;
+    font-size: 1.8rem;
+}
+
+.form-group input,
+.form-group select {
+    width: 100%;
+    padding: 0.8rem;
+    border: 1px solid #ccc;
+    border-radius: var(--borda-arredondada);
+    box-sizing: border-box;
+    font-size: 1rem;
+    transition: border-color 0.3s;
+    background-color: rgba(255, 255, 255, 0.8);
+}
+
+.form-group input:focus,
+.form-group select:focus {
+    border-color: var(--verde-oliva-principal);
+    outline: none;
+    box-shadow: 0 0 0 3px rgba(85, 107, 47, 0.1);
+    background-color: #fff;
+}
+
+.btn {
+    width: 100%;
+    padding: 0.9rem;
+    border: none;
+    border-radius: var(--borda-arredondada);
+    background-color: var(--verde-oliva-principal);
+    color: var(--texto-claro);
+    font-size: 1.1rem;
+    font-weight: bold;
+    cursor: pointer;
+    transition: background-color 0.3s ease;
+    margin-top: 1rem;
+}
+
+.btn:hover {
+    background-color: var(--verde-oliva-medio);
+}
+
+.btn-google {
+    background-color: rgba(255, 255, 255, 0.9);
+    color: #555;
+    border: 1px solid #ddd;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-top: 1rem;
+    text-decoration: none;
+    font-weight: 500;
+}
+.btn-google:hover {
+    background-color: #fff;
+}
+.btn-google img {
+    width: 20px;
+    margin-right: 10px;
+}
+
+.separator {
+    display: flex;
+    align-items: center;
+    text-align: center;
+    margin: 1.5rem 0;
+    color: #555;
+    font-size: 0.9rem;
+}
+.separator::before, .separator::after {
+    content: '';
+    flex: 1;
+    border-bottom: 1px solid #999;
+}
+.separator:not(:empty)::before { margin-right: .5em; }
+.separator:not(:empty)::after { margin-left: .5em; }
+
+.error-message {
+    background-color: rgba(220, 53, 69, 0.1);
+    color: #dc3545;
+    padding: 0.8rem;
+    border: 1px solid rgba(220, 53, 69, 0.2);
+    border-radius: var(--borda-arredondada);
+    margin-bottom: 1.5rem;
+    font-size: 0.9rem;
+}
+
+.form-group {
+    margin-bottom: 1.2rem;
+    text-align: left;
+}
+.form-group label {
+    display: block;
+    margin-bottom: 0.5rem;
+    font-weight: 600;
+    color: var(--texto-escuro);
+    font-size: 0.9rem;
+}

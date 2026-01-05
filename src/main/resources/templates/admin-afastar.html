@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html lang="pt-br" xmlns:th="http://www.thymeleaf.org"
+      xmlns:sec="http://www.thymeleaf.org/extras/spring-security">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin - Gerenciar Afastamentos</title>
+    <link rel="stylesheet" th:href="@{/css/style.css}">
+</head>
+<body>
+
+    <!-- Cabeçalho (Menu Completo) -->
+    <header class="header">
+        <div class="logo">Permanência CSUP</div>
+        <nav>
+            <a th:href="@{/dashboard}">Escala</a>
+            <a th:href="@{/admin/novo-militar}">Cadastrar Militar</a>
+            <a th:href="@{/admin/afastar}" style="text-decoration: underline;">Impedimentos</a>
+            <a th:href="@{/admin/controle}">Sv.Externo</a>
+            <a th:href="@{/admin/troca}">Troca de Serviço</a>
+            <a th:href="@{/admin/usuarios}">Administradores</a>
+            
+            <form th:action="@{/logout}" method="post" style="display: inline;">
+                <button type="submit" class="btn-primary" style="background: none; border: none; font-size: 1rem; margin-left: 1rem; cursor: pointer; color: white;">
+                    Sair
+                </button>
+            </form>
+        </nav>
+    </header>
+
+    <!-- Conteúdo Principal -->
+    <div class="main-container">
+        
+        <!-- CARD 1: Formulário de Afastamento -->
+        <div class="card" style="max-width: 800px; margin: 0 auto 2rem auto;">
+            <div class="card-header">
+                <h2>Novo Afastamento</h2>
+            </div>
+            
+            <form th:action="@{/admin/salvar-afastamento}" method="post">
+                
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem;">
+                    
+                    <!-- 1. Militar -->
+                    <div class="form-group">
+                        <label for="militarId" style="display: block; margin-bottom: 0.5rem; font-weight: 600; color: #333;">Militar (Ativo)</label>
+                        <select id="militarId" name="militarId" required 
+                                style="width: 100%; padding: 0.75rem; border: 1px solid #ccc; border-radius: 8px; font-size: 1rem; background-color: #fff;">
+                            <option value="">-- Selecione --</option>
+                            <option th:each="militar : ${listaMilitaresAtivos}"
+                                    th:value="${militar.id}"
+                                    th:text="${militar.graduacao + ' ' + militar.nomeGuerra}">
+                                Sgt Silva
+                            </option>
+                        </select>
+                    </div>
+                    
+                    <!-- 2. Motivo -->
+                    <div class="form-group">
+                        <label for="motivo" style="display: block; margin-bottom: 0.5rem; font-weight: 600; color: #333;">Motivo</label>
+                        <select id="motivo" name="motivo" required 
+                                style="width: 100%; padding: 0.75rem; border: 1px solid #ccc; border-radius: 8px; font-size: 1rem; background-color: #fff;">
+                            <option value="">-- Selecione --</option>
+                            <option th:each="m : ${listaMotivos}"
+                                    th:value="${m}"
+                                    th:text="${m.getDescricao()}">
+                                Férias
+                            </option>
+                        </select>
+                    </div>
+
+                    <!-- 3. Data Início -->
+                    <div class="form-group">
+                        <label for="dataInicio" style="display: block; margin-bottom: 0.5rem; font-weight: 600; color: #333;">Data de Início</label>
+                        <input type="date" id="dataInicio" name="dataInicio" required 
+                               style="width: 100%; padding: 0.75rem; border: 1px solid #ccc; border-radius: 8px; font-size: 1rem;">
+                    </div>
+                    
+                    <!-- 4. Data Fim -->
+                    <div class="form-group">
+                        <label for="dataFim" style="display: block; margin-bottom: 0.5rem; font-weight: 600; color: #333;">Data de Término</label>
+                        <input type="date" id="dataFim" name="dataFim" required 
+                               style="width: 100%; padding: 0.75rem; border: 1px solid #ccc; border-radius: 8px; font-size: 1rem;">
+                    </div>
+                
+                </div>
+                
+                <div style="margin-top: 1.5rem; text-align: right;">
+                    <a th:href="@{/dashboard}" style="color: #666; text-decoration: none; font-weight: 500; margin-right: 1rem;">Cancelar</a>
+                    <button type="submit" class="btn-primary" style="padding: 0.75rem 1.5rem; font-size: 1rem;">
+                        Confirmar Afastamento
+                    </button>
+                </div>
+            </form>
+        </div>
+        
+        <!-- CARD 2: Tabela de Militares Afastados (Reativar) -->
+        <div class="card" style="max-width: 1000px; margin: 0 auto;">
+            <div class="card-header">
+                <h2>Militares Atualmente Afastados</h2>
+            </div>
+            
+            <table class="escala-table">
+                <thead>
+                    <tr>
+                        <th>Militar</th>
+                        <th>Motivo</th>
+                        <th>Período</th>
+                        <th sec:authorize="hasRole('ADM')" style="text-align: center;">Ação</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr th:each="militar : ${listaMilitaresInativos}">
+                        
+                        <td th:text="${militar.graduacao + ' ' + militar.nomeGuerra}" style="font-weight: 500;">Cb Tomaz</td>
+                        
+                        <td>
+                            <span th:text="${militar.motivoAfastamento.getDescricao()}" 
+                                  style="background-color: #FFF3CD; color: #856404; padding: 0.25rem 0.5rem; border-radius: 4px; font-size: 0.9rem; font-weight: 600;">
+                                Atestado
+                            </span>
+                        </td>
+                        
+                        <td>
+                            <span th:text="${#temporals.format(militar.dataInicioAfastamento, 'dd/MM')}">15/11</span>
+                            até
+                            <span th:text="${#temporals.format(militar.dataFimAfastamento, 'dd/MM/yyyy')}">30/11/2025</span>
+                        </td>
+                        
+                        <td style="text-align: center;">
+                            <a th:href="@{/admin/reativar/{id}(id=${militar.id})}" 
+                               class="btn-primary"
+                               style="background-color: #28a745; border: none; padding: 0.4rem 0.8rem; font-size: 0.9rem; text-decoration: none;"
+                               onclick="return confirm('Deseja REATIVAR este militar antes do prazo?');">
+                                &#8634; Reativar
+                            </a>
+                        </td>
+                    </tr>
+                    
+                    <tr th:if="${#lists.isEmpty(listaMilitaresInativos)}">
+                        <td colspan="4" style="text-align: center; padding: 2rem; color: #777;">
+                            Nenhum militar afastado no momento.
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+        
+    </div>
+
+</body>
+</html>

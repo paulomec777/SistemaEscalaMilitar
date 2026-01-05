@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html lang="pt-br" xmlns:th="http://www.thymeleaf.org"
+      xmlns:sec="http://www.thymeleaf.org/extras/spring-security">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin - Editar Militar</title>
+    <link rel="stylesheet" th:href="@{/css/style.css}">
+</head>
+<body>
+
+    <!-- Cabeçalho (Menu Completo - FASE 19) -->
+    <header class="header">
+        <div class="logo">Permanência CSUP</div>
+        <nav>
+            <a th:href="@{/dashboard}">Escala</a>
+            <a th:href="@{/admin/novo-militar}" sec:authorize="hasRole('ADM')">Cadastrar Militar</a>
+            <a th:href="@{/admin/afastar}" sec:authorize="hasRole('ADM')">Impedimentos</a>
+            <a th:href="@{/admin/controle}" sec:authorize="hasRole('ADM')">Sv.Externo</a>
+            <a th:href="@{/admin/usuarios}" sec:authorize="hasRole('ADM')">Administradores</a>
+            
+            <!-- (Formulário de Logout) -->
+        </nav>
+        <nav>
+           
+            <form th:action="@{/logout}" method="post" style="display: inline;">
+                <button type="submit" class="btn-primary" style="background: none; border: none; font-size: 1rem; margin-left: 1.5rem;">
+                    Sair
+                </button>
+            </form>
+        </nav>
+    </header>
+
+    <!-- Conteúdo Principal -->
+    <div class="main-container">
+        
+        <div class="card">
+            <div class="card-header">
+                <h2>Editar Militar</h2>
+            </div>
+            
+            <!-- Formulário de EDIÇÃO (já existe) -->
+            <form th:action="@{/admin/salvar-edicao}" method="post" th:object="${militar}">
+                
+                <input type="hidden" th:field="*{id}" />
+
+                <div class="form-group" style="margin-bottom: 1rem;">
+                    <label for="graduacao" style="display: block; margin-bottom: 0.5rem; font-weight: 500;">Graduação</label>
+                    <input type="text" id="graduacao" th:field="*{graduacao}" placeholder="Ex: Sgt, Ten, Cap" style="width: 100%; padding: 0.75rem; border: 1px solid #ccc; border-radius: 8px; box-sizing: border-box;">
+                </div>
+                
+                <div class="form-group" style="margin-bottom: 1.5rem;">
+                    <label for="nomeGuerra" style="display: block; margin-bottom: 0.5rem; font-weight: 500;">Nome de Guerra</label>
+                    <input type="text" id="nomeGuerra" th:field="*{nomeGuerra}" placeholder="Ex: Silva, Monteiro" style="width: 100%; padding: 0.75rem; border: 1px solid #ccc; border-radius: 8px; box-sizing: border-box;">
+                </div>
+                
+                <button type="submit" class="btn-primary">Salvar Mudanças</button>
+                <a th:href="@{/dashboard}" style="margin-left: 1rem; color: #555;">Cancelar</a>
+                
+            </form>
+            
+            <!-- 
+              --- CÓDIGO NOVO (FASE 20) ---
+              O "Botão de Perigo" (Excluir)
+              Ele é um formulário separado que aponta para /admin/deletar
+            -->
+            <div style="border-top: 1px solid #eee; margin-top: 2rem; padding-top: 1.5rem;">
+                <h3 style="color: #E74C3C;">Zona de Perigo</h3>
+                <p style="color: #555; font-size: 0.9rem;">Esta ação não pode ser desfeita.</p>
+                
+                <form th:action="@{/admin/deletar/{id}(id=${militar.id})}" 
+                      method="post"
+                      onsubmit="return confirm('ATENÇÃO: Você tem certeza que deseja EXCLUIR este militar PERMANENTEMENTE?');">
+                      
+                    <button type="submit" class="btn-primary" 
+                            style="background-color: #E74C3C; border-color: #E74C3C;">
+                        Excluir Militar Permanentemente
+                    </button>
+                </form>
+            </div>
+            
+        </div>
+    </div>
+
+</body>
+</html>

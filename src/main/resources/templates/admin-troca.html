@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html lang="pt-br" xmlns:th="http://www.thymeleaf.org"
+      xmlns:sec="http://www.thymeleaf.org/extras/spring-security">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin - Troca de Serviço</title>
+    <link rel="stylesheet" th:href="@{/css/style.css}">
+</head>
+<body>
+
+    <!-- Cabeçalho -->
+   <header class="header">
+        <div class="logo">Permanência CSUP</div>
+        <nav>
+            <a th:href="@{/dashboard}">Escala</a>
+            
+            <!-- Links de ADM (Só aparecem se logado como ADM) -->
+            <span sec:authorize="hasRole('ADM')">
+                <a th:href="@{/admin/novo-militar}">Cadastrar Militar</a>
+                <a th:href="@{/admin/afastar}">Impedimentos</a>
+                <a th:href="@{/admin/controle}">Sv.Externo</a>
+                <a th:href="@{/admin/troca}">Troca de Serviço</a>
+                <a th:href="@{/admin/usuarios}">Administradores</a>
+            
+            <form th:action="@{/logout}" method="post" style="display: inline;">
+                <button type="submit" class="btn-primary" style="background: none; border: none; font-size: 1rem; margin-left: 1rem; cursor: pointer; color: white;">
+                    Sair
+                </button>
+            </form>
+        </nav>
+    </header>
+
+    <!-- Conteúdo Principal -->
+    <div class="main-container">
+        
+        <!-- Cartão Centralizado -->
+        <div class="card" style="max-width: 800px; margin: 0 auto;">
+            <div class="card-header">
+                <h2>Registrar Troca de Serviço (Paga)</h2>
+            </div>
+            
+            <div style="background-color: #e9ecef; padding: 1rem; border-radius: 8px; margin-bottom: 1.5rem; border-left: 5px solid #6c757d;">
+                <p style="margin: 0; color: #495057; font-size: 0.95rem;">
+                    <strong>Como funciona:</strong> Selecione quem "pagou" (saiu da escala) e quem "recebeu" (entrou na escala).
+                    <br>
+                    A folga será <strong>ZERADA</strong> apenas para o militar que <strong>SAI</strong> (quem pagou).
+                </p>
+            </div>
+            
+            <form th:action="@{/admin/salvar-troca}" method="post">
+                
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 2rem;">
+                    
+                    <!-- Coluna 1: QUEM SAI (PAGA) -->
+                    <div class="form-group">
+                        <label for="militarSaiId" style="display: block; margin-bottom: 0.5rem; font-weight: 600; color: #dc3545;">
+                            QUEM SAI (Paga o serviço)
+                        </label>
+                        <select id="militarSaiId" name="militarSaiId" required 
+                                style="width: 100%; padding: 0.75rem; border: 1px solid #dc3545; border-radius: 8px; font-size: 1rem; background-color: #fff5f5;">
+                            <option value="">-- Selecione quem pagou --</option>
+                            <!-- Loop na lista de militares ativos -->
+                            <option th:each="militar : ${listaMilitaresAtivos}"
+                                    th:value="${militar.id}"
+                                    th:text="${militar.graduacao + ' ' + militar.nomeGuerra + ' (Folga: ' + militar.folga + ')'}">
+                                Sgt Silva (Folga: 15)
+                            </option>
+                        </select>
+                        <small style="display: block; margin-top: 0.5rem; color: #dc3545;">
+                            Este militar terá a folga zerada.
+                        </small>
+                    </div>
+                    
+                    <!-- Coluna 2: QUEM ENTRA (RECEBE) -->
+                    <div class="form-group">
+                        <label for="militarEntraId" style="display: block; margin-bottom: 0.5rem; font-weight: 600; color: #28a745;">
+                            QUEM ENTRA (Tira o serviço)
+                        </label>
+                        <select id="militarEntraId" name="militarEntraId" required 
+                                style="width: 100%; padding: 0.75rem; border: 1px solid #28a745; border-radius: 8px; font-size: 1rem; background-color: #f0fff4;">
+                            <option value="">-- Selecione quem assumiu --</option>
+                            <option th:each="militar : ${listaMilitaresAtivos}"
+                                    th:value="${militar.id}"
+                                    th:text="${militar.graduacao + ' ' + militar.nomeGuerra + ' (Folga: ' + militar.folga + ')'}">
+                                Cb Tomaz (Folga: 0)
+                            </option>
+                        </select>
+                        <small style="display: block; margin-top: 0.5rem; color: #28a745;">
+                            A folga deste militar NÃO muda.
+                        </small>
+                    </div>
+                    
+                </div>
+                
+                <div style="margin-top: 2rem; text-align: right; border-top: 1px solid #eee; padding-top: 1.5rem;">
+                    <a th:href="@{/dashboard}" style="color: #666; text-decoration: none; font-weight: 500; margin-right: 1rem;">Cancelar</a>
+                    <button type="submit" class="btn-primary" style="padding: 0.75rem 2rem; font-size: 1rem;">
+                        Confirmar Troca
+                    </button>
+                </div>
+                
+            </form>
+            
+        </div>
+    </div>
+
+</body>
+</html>

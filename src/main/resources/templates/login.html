@@ -1,0 +1,342 @@
+<!DOCTYPE html>
+<html lang="pt-br" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Login - Escala de Serviço</title>
+    <!-- Fonte Inter -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <!-- FontAwesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <style>
+        :root {
+            --primary: #556B2F;      /* Verde Oliva */
+            --primary-dark: #3E4F22; /* Verde Escuro */
+            --text-main: #2D3748;    /* Cinzento Escuro */
+            --text-muted: #718096;   /* Cinzento Médio */
+            --bg-glass: rgba(255, 255, 255, 0.95);
+            --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+            --radius: 12px;
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            margin: 0;
+            padding: 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            /* Fundo com textura subtil e gradiente profissional */
+            background-image: 
+                url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23556b2f' fill-opacity='0.05'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E"),
+                linear-gradient(135deg, #F0F4F8 0%, #D3D9DE 100%);
+            background-color: #f7fafc;
+        }
+
+        .login-container {
+            width: 100%;
+            padding: 20px;
+            display: flex;
+            justify-content: center;
+        }
+
+        .login-box {
+            background: var(--bg-glass);
+            padding: 3.5rem;
+            border-radius: var(--radius);
+            box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+            width: 100%;
+            max-width: 420px;
+            text-align: center;
+            position: relative;
+            border: 1px solid rgba(255, 255, 255, 0.5);
+            /* Animação de entrada suave */
+            animation: slideUp 0.6s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+
+        /* Barra colorida no topo para identidade visual */
+        .login-box::after {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 6px;
+            background: linear-gradient(90deg, var(--primary), #8FBC8F);
+        }
+
+        .login-header {
+            margin-bottom: 2.5rem;
+        }
+
+        .login-logo-img {
+            max-width: 120px; /* Ajuste o tamanho conforme necessário */
+            height: auto;
+            margin-bottom: 1.5rem;
+            filter: drop-shadow(0 4px 6px rgba(0,0,0,0.1));
+        }
+
+        .login-header h1 {
+            color: var(--primary);
+            font-size: 1.75rem;
+            font-weight: 800;
+            margin: 0;
+            letter-spacing: -0.025em;
+            line-height: 1.2;
+        }
+
+        .login-header p {
+            color: var(--text-muted);
+            font-size: 0.95rem;
+            margin-top: 0.5rem;
+            font-weight: 500;
+        }
+
+        /* Estilo dos Inputs */
+        .form-group {
+            margin-bottom: 1.5rem;
+            text-align: left;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 0.5rem;
+            font-weight: 600;
+            color: var(--text-main);
+            font-size: 0.9rem;
+        }
+
+        .input-wrapper {
+            position: relative;
+            display: flex;
+            align-items: center;
+        }
+
+        .input-wrapper i {
+            position: absolute;
+            left: 16px;
+            color: #A0AEC0;
+            transition: color 0.2s;
+            font-size: 1rem;
+        }
+
+        .input-wrapper input {
+            width: 100%;
+            padding: 12px 16px 12px 48px; /* Espaço para o ícone */
+            border: 2px solid #E2E8F0;
+            border-radius: 8px;
+            font-size: 1rem;
+            color: var(--text-main);
+            transition: all 0.2s ease;
+            background-color: #F7FAFC;
+        }
+
+        .input-wrapper input:focus {
+            border-color: var(--primary);
+            background-color: #fff;
+            outline: none;
+            box-shadow: 0 0 0 3px rgba(85, 107, 47, 0.15);
+        }
+
+        .input-wrapper input:focus + i {
+            color: var(--primary);
+        }
+
+        /* Botão Entrar */
+        .btn-login {
+            width: 100%;
+            padding: 14px;
+            border: none;
+            border-radius: 8px;
+            background-color: var(--primary);
+            color: #fff;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+            margin-top: 1rem;
+            box-shadow: 0 4px 6px rgba(85, 107, 47, 0.2);
+        }
+
+        .btn-login:hover {
+            background-color: var(--primary-dark);
+            transform: translateY(-1px);
+            box-shadow: 0 6px 8px rgba(85, 107, 47, 0.3);
+        }
+
+        .btn-login:active {
+            transform: translateY(0);
+        }
+
+        /* Separador */
+        .separator {
+            display: flex;
+            align-items: center;
+            text-align: center;
+            margin: 2rem 0;
+            color: var(--text-muted);
+            font-size: 0.85rem;
+            font-weight: 500;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+
+        .separator::before, .separator::after {
+            content: '';
+            flex: 1;
+            border-bottom: 1px solid #E2E8F0;
+        }
+
+        .separator::before { margin-right: 15px; }
+        .separator::after { margin-left: 15px; }
+
+        /* Botão Google - Recuperação */
+        .login-recovery {
+            text-align: center;
+        }
+
+        .recovery-label {
+            display: block;
+            margin-bottom: 0.8rem;
+            font-size: 0.9rem;
+            color: var(--text-muted);
+            font-weight: 500;
+        }
+
+        .btn-recovery-google {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            width: 100%;
+            padding: 12px;
+            border-radius: 8px;
+            background-color: #fff;
+            border: 2px solid #E2E8F0;
+            color: var(--text-main);
+            font-weight: 600;
+            font-size: 0.95rem;
+            text-decoration: none;
+            transition: all 0.2s ease;
+            gap: 12px;
+        }
+
+        .btn-recovery-google:hover {
+            background-color: #F7FAFC;
+            border-color: #CBD5E0;
+            transform: translateY(-1px);
+            box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+        }
+
+        .btn-recovery-google img {
+            width: 20px;
+            height: 20px;
+        }
+
+        /* Footer */
+        .login-footer {
+            margin-top: 2rem;
+            padding-top: 1.5rem;
+            border-top: 1px solid #EDF2F7;
+            font-size: 0.85rem;
+            color: var(--text-muted);
+        }
+
+        /* Mensagens de Alerta */
+        .error-message, .success-message {
+            padding: 12px 16px;
+            border-radius: 8px;
+            font-size: 0.9rem;
+            margin-bottom: 1.5rem;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            text-align: left;
+            font-weight: 500;
+            animation: fadeIn 0.4s ease;
+        }
+
+        .error-message {
+            background-color: #FFF5F5;
+            color: #C53030;
+            border: 1px solid #FED7D7;
+        }
+
+        .success-message {
+            background-color: #F0FFF4;
+            color: #2F855A;
+            border: 1px solid #C6F6D5;
+        }
+
+        @keyframes slideUp {
+            from { opacity: 0; transform: translateY(40px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+    </style>
+</head>
+<body class="login-body">
+
+    <div class="login-container">
+        <div class="login-box">
+            
+            <div class="login-header">
+                <!-- Substitua 'google.png' pelo nome da sua imagem na pasta /img/ -->
+                <!-- AQUI ESTÁ O LOGO QUE VOCÊ PEDIU -->
+                <img th:src="@{/img/soldado.png}" alt="Logo Escala de Serviço" class="login-logo-img">
+                
+                <h1>Escala de Serviço</h1>
+                <p>Gestão Administrativa de Pessoal</p>
+            </div>
+
+            <!-- Mensagens de Feedback -->
+            <div th:if="${param.error}" class="error-message">
+                <i class="fas fa-exclamation-circle fa-lg"></i> 
+                <span>Credenciais inválidas. Verifique o seu utilizador e senha.</span>
+            </div>
+            <div th:if="${param.logout}" class="success-message">
+                <i class="fas fa-check-circle fa-lg"></i> 
+                <span>Logout realizado com sucesso.</span>
+            </div>
+
+            <!-- FORMULÁRIO DE LOGIN (ADM) -->
+            <form th:action="@{/login}" method="post">
+                <div class="form-group">
+                    <label for="username">Utilizador</label>
+                    <div class="input-wrapper">
+                        <input type="text" id="username" name="username" placeholder="Ex: Nome De Guerra" autocomplete="username" required>
+                        <i class="fas fa-user"></i>
+                    </div>
+                </div>
+                
+                <div class="form-group">
+                    <label for="password">Senha</label>
+                    <div class="input-wrapper">
+                        <input type="password" id="password" name="password" placeholder="••••••••" autocomplete="current-password" required>
+                        <i class="fas fa-lock"></i>
+                    </div>
+                </div>
+                
+                <button type="submit" class="btn-login">
+                    Acessar Sistema <i class="fas fa-arrow-right-to-bracket"></i>
+                </button>
+            </form>
+
+             
+            <div class="login-footer">
+                <p>Precisa de suporte técnico? Contacte a <strong>Secção de TI</strong>.</p>
+            </div>
+        </div>
+    </div>
+
+</body>
+</html>

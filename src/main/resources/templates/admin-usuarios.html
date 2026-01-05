@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html lang="pt-br" xmlns:th="http://www.thymeleaf.org"
+      xmlns:sec="http://www.thymeleaf.org/extras/spring-security">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin - Gerenciar Usuários</title>
+    <link rel="stylesheet" th:href="@{/css/style.css}">
+</head>
+<body>
+
+    <!-- Cabeçalho (Menu Completo) -->
+    <header class="header">
+        <div class="logo">Permanência CSUP</div>
+        <nav>
+            <a th:href="@{/dashboard}">Escala</a>
+            <a th:href="@{/admin/novo-militar}">Cadastrar Militar</a>
+            <a th:href="@{/admin/afastar}">Impedimentos</a>
+            <a th:href="@{/admin/controle}">Sv.Externo</a>
+            <a th:href="@{/admin/troca}">Troca de Serviço</a>
+            <a th:href="@{/admin/usuarios}" style="text-decoration: underline;">Administradores</a>
+            
+            <form th:action="@{/logout}" method="post" style="display: inline;">
+                <button type="submit" class="btn-primary" style="background: none; border: none; font-size: 1rem; margin-left: 1rem; cursor: pointer; color: white;">
+                    Sair
+                </button>
+            </form>
+        </nav>
+    </header>
+
+    <!-- Conteúdo Principal -->
+    <div class="main-container">
+        
+        <!-- CARD 1: Formulário para Adicionar Usuário -->
+        <div class="card" style="max-width: 1000px; margin: 0 auto 2rem auto;">
+            <div class="card-header">
+                <h2>Adicionar Novo Usuário (Login)</h2>
+            </div>
+            
+            <form th:action="@{/admin/salvar-usuario}" method="post" th:object="${usuarioVazio}">
+                
+                <!-- Grid para organizar os campos (2 por linha em telas médias/grandes) -->
+                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 1.5rem; margin-bottom: 1.5rem;">
+                    
+                    <!-- Campo Nome Completo -->
+                    <div class="form-group">
+                        <label for="nomeCompleto" style="display: block; margin-bottom: 0.5rem; font-weight: 600; color: #333;">Nome Completo</label>
+                        <input type="text" id="nomeCompleto" th:field="*{nomeCompleto}" 
+                               placeholder="Ex: Sgt Silva" required
+                               style="width: 100%; padding: 0.75rem; border: 1px solid #ccc; border-radius: 8px; font-size: 1rem;">
+                    </div>
+
+                    <!-- Campo Login -->
+                    <div class="form-group">
+                        <label for="login" style="display: block; margin-bottom: 0.5rem; font-weight: 600; color: #333;">Login (Usuário)</label>
+                        <input type="text" id="login" th:field="*{login}" 
+                               placeholder="Ex: sgt.silva" required
+                               style="width: 100%; padding: 0.75rem; border: 1px solid #ccc; border-radius: 8px; font-size: 1rem;">
+                    </div>
+                    
+                    <!-- Campo Senha -->
+                    <div class="form-group">
+                        <label for="senha" style="display: block; margin-bottom: 0.5rem; font-weight: 600; color: #333;">Senha</label>
+                        <input type="password" id="senha" th:field="*{senha}" 
+                               placeholder="Senha forte" required
+                               style="width: 100%; padding: 0.75rem; border: 1px solid #ccc; border-radius: 8px; font-size: 1rem;">
+                    </div>
+                    
+                    <!-- Campo Perfil -->
+                    <div class="form-group">
+                        <label for="perfil" style="display: block; margin-bottom: 0.5rem; font-weight: 600; color: #333;">Perfil de Acesso</label>
+                        <select id="perfil" th:field="*{perfil}" required 
+                                style="width: 100%; padding: 0.75rem; border: 1px solid #ccc; border-radius: 8px; font-size: 1rem; background-color: white;">
+                            <option value="">-- Selecione --</option>
+                            <option th:each="p : ${listaPerfis}"
+                                    th:value="${p}"
+                                    th:text="${p.name()}">
+                                ADM
+                            </option>
+                        </select>
+                    </div>
+                    
+                </div>
+                
+                <!-- Botão de Salvar (Alinhado à direita) -->
+                <div style="text-align: right;">
+                    <button type="submit" class="btn-primary" style="padding: 0.75rem 2rem; font-size: 1rem;">
+                        Salvar Novo Usuário
+                    </button>
+                </div>
+            </form>
+        </div>
+        
+        <!-- CARD 2: Tabela de Usuários Cadastrados -->
+        <div class="card" style="max-width: 1000px; margin: 0 auto;">
+            <div class="card-header">
+                <h2>Usuários Cadastrados</h2>
+            </div>
+            
+            <table class="escala-table">
+                <thead>
+                    <tr>
+                        <th>Login</th>
+                        <th>Nome Completo</th>
+                        <th>Perfil</th>
+                        <th style="text-align: center;" sec:authorize="hasRole('ADM')">Ação</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr th:each="user : ${listaUsuarios}">
+                        
+                        <td th:text="${user.login}" style="font-weight: 600; color: #556B2F;">root</td>
+                        <td th:text="${user.nomeCompleto}">Administrador do Sistema</td>
+                        
+                        <td>
+                            <!-- Badge para o Perfil -->
+                            <span th:text="${user.perfil.name()}"
+                                  th:style="${user.perfil.name() == 'ADM' ? 'background-color: #17a2b8; color: white; padding: 0.25rem 0.5rem; border-radius: 4px; font-size: 0.85rem;' : 'background-color: #6c757d; color: white; padding: 0.25rem 0.5rem; border-radius: 4px; font-size: 0.85rem;'}">
+                                ADM
+                            </span>
+                        </td>
+                        
+                        <td style="text-align: center;">
+                            <!-- 
+                              Botão de Excluir 
+                              th:if="${user.id != 1}" -> Protege o root (ID 1)
+                            -->
+                            <form th:if="${user.id != 1}"
+                                  th:action="@{/admin/deletar-usuario/{id}(id=${user.id})}" 
+                                  method="post"
+                                  onsubmit="return confirm('Tem certeza que deseja EXCLUIR este usuário? Ele perderá o acesso ao sistema.');"
+                                  style="margin: 0;">
+                                <button type="submit" 
+                                        style="background-color: #dc3545; color: white; border: none; padding: 0.4rem 0.8rem; border-radius: 4px; cursor: pointer; font-weight: 600; font-size: 0.9rem;">
+                                    Excluir
+                                </button>
+                            </form>
+                            
+                            <!-- Se for o ID 1 (root), mostra um texto discreto -->
+                            <span th:if="${user.id == 1}" style="color: #999; font-size: 0.9rem; font-style: italic;">
+                                (Principal)
+                            </span>
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+        
+    </div>
+
+</body>
+</html>

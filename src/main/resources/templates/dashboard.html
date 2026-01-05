@@ -1,0 +1,166 @@
+<!DOCTYPE html>
+<html lang="pt-br" xmlns:th="http://www.thymeleaf.org"
+      xmlns:sec="http://www.thymeleaf.org/extras/spring-security">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard - Escala de Serviço</title>
+    <!-- Linka nosso arquivo CSS -->
+    <link rel="stylesheet" th:href="@{/css/style.css}">
+    <!-- Adiciona ícones (opcional, mas fica bonito) -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+</head>
+<body>
+
+    <!-- Cabeçalho -->
+    <header class="header">
+        <div class="logo">Permanência CSUP</div>
+        <nav>
+            <a th:href="@{/dashboard}" style="text-decoration: underline;">Escala</a>
+            
+            <!-- Links de ADM -->
+            <span sec:authorize="hasRole('ADM')">
+                <a th:href="@{/admin/novo-militar}">Cadastrar Militar</a>
+                <a th:href="@{/admin/afastar}">Impedimentos</a>
+                <a th:href="@{/admin/controle}">Sv.Externo</a>
+                <a th:href="@{/admin/troca}">Troca de Serviço</a>
+               
+                <a th:href="@{/admin/usuarios}">Administradores</a>
+            </span>
+            
+            <!-- Botão de SAIR -->
+            <form sec:authorize="isAuthenticated()" th:action="@{/logout}" method="post" style="display: inline;">
+                <button type="submit" class="btn-primary" style="background: none; border: none; font-size: 1rem; margin-left: 1rem; cursor: pointer; color: white;">
+                    Sair
+                </button>
+            </form>
+
+            <!-- Botão de ENTRAR -->
+            <a sec:authorize="!isAuthenticated()" th:href="@{/login}" class="btn-primary" style="margin-left: 1.5rem; text-decoration: none;">
+                Área Administrativa
+            </a>
+        </nav>
+    </header>
+
+    <!-- Conteúdo Principal -->
+    <div class="main-container">
+        
+        <!-- Cartão de Boas-Vindas -->
+        <div class="card" style="padding: 1rem 1.5rem; margin-bottom: 1.5rem;">
+            <!-- LÓGICA CORRIGIDA AQUI -->
+            <h2 style="font-size: 1.2rem; margin: 0;">
+                <!-- Se estiver logado, mostra o nome -->
+                <span sec:authorize="isAuthenticated()">
+                    Bem-vindo, <span sec:authentication="name" style="color: var(--verde-oliva-principal);">Usuário</span>!
+                </span>
+                <!-- Se NÃO estiver logado, mostra apenas Bem-vindo -->
+                <span sec:authorize="!isAuthenticated()">
+                    Bem-vindo!
+                </span>
+            </h2>
+            <p style="margin: 0.5rem 0 0 0; font-size: 0.9rem; color: #666;">Previsão da escala de permanência.</p>
+        </div>
+        
+        <!-- Cartões de Destaque -->
+        <div class="grid" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 1.5rem; margin-bottom: 2rem;">
+
+            <!-- Serviço Hoje -->
+            <div class="card" style="margin-bottom: 0; background-color: #fff; border-left: 5px solid #556B2F;">
+                <h3 style="margin-top: 0; color: #556B2F; font-size: 1rem; text-transform: uppercase; letter-spacing: 1px;">Serviço HOJE (Titular)</h3>
+                <div th:if="${servicoHoje}">
+                    <h2 style="margin: 0.5rem 0; font-size: 1.8rem;" th:text="${servicoHoje.graduacao + ' ' + servicoHoje.nomeGuerra}">Sgt Silva</h2>
+                    <span th:text="${'(Folga ' + servicoHoje.folga + ')'}" style="color: #666; font-weight: 500;">(Folga 15)</span>
+                </div>
+                <div th:unless="${servicoHoje}">
+                    <h2 style="margin: 0.5rem 0; color: #999;">Ninguém escalado</h2>
+                </div>
+            </div>
+
+            <!-- Substituto Hoje -->
+            <div class="card" style="margin-bottom: 0; background-color: #fff; border-left: 5px solid #3498DB;">
+                <h3 style="margin-top: 0; color: #3498DB; font-size: 1rem; text-transform: uppercase; letter-spacing: 1px;">Substituto HOJE (Reserva)</h3>
+                <div th:if="${substitutoAmanha}">
+                    <h2 style="margin: 0.5rem 0; font-size: 1.8rem;" th:text="${substitutoAmanha.graduacao + ' ' + substitutoAmanha.nomeGuerra}">Cb Nascimento</h2>
+                    <span th:text="${'(Folga ' + substitutoAmanha.folga + ')'}" style="color: #666; font-weight: 500;">(Folga 14)</span>
+                </div>
+                <div th:unless="${substitutoAmanha}">
+                    <h2 style="margin: 0.5rem 0; color: #999;">Sem Reserva</h2>
+                </div>
+            </div>
+        </div>
+
+        <!-- Tabela da Escala -->
+        <div class="card">
+            <div class="card-header">
+                <h2>Previsão da Escala (Por Folga)</h2>
+                
+                <div sec:authorize="hasRole('ADM')">
+                    <a th:href="@{/admin/novo-militar}" class="btn-primary" style="font-size: 0.9rem;">
+                        <i class="fas fa-plus"></i> Adicionar
+                    </a>
+                    
+                    <form th:action="@{/admin/avancar-dia}" method="post" style="display: inline-block; margin-left: 0.5rem;">
+                        <button type="submit" class="btn-primary" 
+                                style="background-color: #E67E22; border-color: #E67E22; font-size: 0.9rem;"
+                                onclick="return confirm('Tem certeza que deseja AVANÇAR O DIA?');">
+                            <i class="fas fa-forward"></i> Avançar Dia
+                        </button>
+                    </form>
+                </div>
+            </div>
+            
+            <table class="escala-table">
+                <thead>
+                    <tr>
+                        <th style="width: 30%;">Militar</th>
+                        <th style="width: 10%; text-align: center;">Folga</th>
+                        <th style="width: 20%; text-align: center;">Status</th>
+                        <th style="width: 20%; text-align: center;">Último Serviço</th>
+                        <th sec:authorize="hasRole('ADM')" style="width: 20%; text-align: center;">Ações</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr th:each="militar : ${listaMilitares}" 
+                        th:class="${militar.id == proximoMilitarId} ? 'proximo-na-escala' : ''">
+                        
+                        <td th:text="${militar.graduacao + ' ' + militar.nomeGuerra}" style="font-weight: 600;">Sgt Silva</td>
+                        <td th:text="${militar.folga}" style="text-align: center; font-weight: bold; color: #555;">15</td>
+                        
+                        <td style="text-align: center;">
+                            <span th:if="${militar.ativoNaEscala and !militar.emServicoExterno}" class="badge badge-success">Ativo</span>
+                            <span th:unless="${militar.ativoNaEscala}" th:text="${militar.motivoAfastamento.getDescricao()}" class="badge badge-warning">Férias</span>
+                            <span th:if="${militar.emServicoExterno}" class="badge badge-info">Externo</span>
+                        </td>
+                        
+                        <td style="text-align: center; color: #666;" 
+                            th:text="${militar.dataUltimoServico != null} ? ${#temporals.format(militar.dataUltimoServico, 'dd/MM/yyyy')} : '-'">
+                            01/01/2025
+                        </td>
+                        
+                        <td sec:authorize="hasRole('ADM')" style="text-align: center;">
+                            <!-- Botão EDITAR (Azul) -->
+                            <a th:href="@{/admin/editar/{id}(id=${militar.id})}" 
+                               class="btn-acao" 
+                               style="background-color: #3498DB; text-decoration: none; padding: 0.3rem 0.6rem; display: inline-block; margin-right: 5px;"
+                               title="Editar Dados">
+                               <i class="fas fa-edit"></i> <span style="font-size: 0.85rem;">Editar</span>
+                            </a>
+                            
+                            <!-- Botão AFASTAR (Laranja) -->
+                            <a th:href="@{/admin/afastar(id=${militar.id})}" 
+                               class="btn-acao" 
+                               style="background-color: #F39C12; text-decoration: none; padding: 0.3rem 0.6rem; display: inline-block;"
+                               title="Lançar Impedimento">
+                               <i class="fas fa-user-slash"></i> <span style="font-size: 0.85rem;">Afastar</span>
+                            </a>
+                        </td>
+                    </tr>
+                    <tr th:if="${#lists.isEmpty(listaMilitares)}">
+                        <td colspan="5" style="text-align: center; padding: 2rem; color: #999;">Nenhum militar cadastrado.</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+</body>
+</html>

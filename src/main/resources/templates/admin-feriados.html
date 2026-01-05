@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="pt-br" xmlns:th="http://www.thymeleaf.org"
+      xmlns:sec="http://www.thymeleaf.org/extras/spring-security">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin - Gerenciar Feriados</title>
+    <link rel="stylesheet" th:href="@{/css/style.css}">
+</head>
+<body>
+
+    <!-- Cabeçalho -->
+    <header class="header">
+        <div class="logo">Escala de Serviço (ADM)</div>
+        <nav>
+            <a th:href="@{/dashboard}">Escala</a>
+            <a th:href="@{/admin/novo-militar}">Cadastrar Militar</a>
+            <a th:href="@{/admin/afastar}">Impedimentos</a>
+            <a th:href="@{/admin/controle}">Sv.Externo</a>
+            <a th:href="@{/admin/troca}">Troca de Serviço</a>
+            <a th:href="@{/admin/usuarios}">Administradores</a>
+            
+            <form th:action="@{/logout}" method="post" style="display: inline;">
+                <button type="submit" class="btn-primary" style="background: none; border: none; font-size: 1rem; margin-left: 1rem; cursor: pointer; color: white;">
+                    Sair
+                </button>
+            </form>
+        </nav>
+    </header>
+
+    <!-- Conteúdo Principal -->
+    <div class="main-container">
+        
+        <!-- Coluna 1: Adicionar Feriado -->
+        <div class="card" style="margin-bottom: 1.5rem;">
+            <div class="card-header" style="margin-bottom: 1rem;">
+                <h2>Adicionar Novo Feriado</h2>
+            </div>
+            
+            <form th:action="@{/admin/salvar-feriado}" method="post" th:object="${feriadoVazio}">
+                
+                <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 1rem; align-items: flex-end;">
+                    <!-- Campo Descrição -->
+                    <div>
+                        <label for="descricao" style="display: block; margin-bottom: 0.5rem; font-weight: 500;">Descrição</label>
+                        <input type="text" id="descricao" th:field="*{descricao}" placeholder="Ex: Natal" style="width: 100%; padding: 0.75rem; border: 1px solid #ccc; border-radius: 8px; box-sizing: border-box;">
+                    </div>
+                    
+                    <!-- Campo Data -->
+                    <div>
+                        <label for="data" style="display: block; margin-bottom: 0.5rem; font-weight: 500;">Data</label>
+                        <input type="date" id="data" th:field="*{data}" required style="width: 100%; padding: 0.75rem; border: 1px solid #ccc; border-radius: 8px; box-sizing: border-box;">
+                    </div>
+                    
+                    <button type="submit" class="btn-primary">Salvar Feriado</button>
+                </div>
+            </form>
+        </div>
+        
+        <!-- Coluna 2: Feriados Cadastrados -->
+        <div class="card">
+            <div class="card-header">
+                <h2>Feriados Cadastrados</h2>
+            </div>
+            
+            <table class="escala-table">
+                <thead>
+                    <tr>
+                        <th>Data</th>
+                        <th>Descrição</th>
+                        <th sec:authorize="hasRole('ADM')">Ação</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr th:each="feriado : ${listaFeriados}">
+                        <td th:text="${#temporals.format(feriado.data, 'dd/MM/yyyy')}">25/12/2025</td>
+                        <td th:text="${feriado.descricao}">Natal</td>
+                        <td>
+                            <form th:action="@{/admin/deletar-feriado/{id}(id=${feriado.id})}" 
+                                  method="post"
+                                  onsubmit="return confirm('Tem certeza que deseja EXCLUIR este feriado?');">
+                                <button type="submit" class="btn-primary" 
+                                        style="background-color: #E74C3C; font-size: 0.8rem; padding: 0.4rem 0.8rem;">
+                                    Excluir
+                                </button>
+                            </form>
+                        </td>
+                    </tr>
+                    <tr th:if="${#lists.isEmpty(listaFeriados)}">
+                        <td colspan="3">Nenhum feriado cadastrado.</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+        
+    </div>
+
+</body>
+</html>
