@@ -1,10 +1,10 @@
-# 1. Etapa de Construção (Build)
+# 1. Etapa de Construção
 FROM maven:3.8.5-openjdk-17 AS build
 COPY . .
 RUN mvn clean package -DskipTests
 
-# 2. Etapa de Execução
-FROM openjdk:17-jdk-slim
+# 2. Etapa de Execução (Trocamos a imagem aqui)
+FROM eclipse-temurin:17-jdk
 COPY --from=build /target/*.jar app.jar
 EXPOSE 8080
 ENTRYPOINT ["java", "-jar", "app.jar"]
