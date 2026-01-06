@@ -9,5 +9,4 @@ dificuldade de acesso e riscos de redundância ou erros humanos.
 
 Desenvolvido por **Paulo Henrique Tomaz Martins** 
 * [Meu LinkedIn](www.linkedin.com/in/paulo-henrique-517268269)
-* 
-Entre em contato: paulo92176914@gmail.com
+* contato: paulo92176914@gmail.com
