@@ -3,15 +3,19 @@ package br.mil.eb.escala;
 import br.mil.eb.escala.model.Perfil;
 import br.mil.eb.escala.model.Usuario;
 import br.mil.eb.escala.repository.UsuarioRepository;
+import jakarta.annotation.PostConstruct; // Importante para o fuso horário
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
+import org.springframework.scheduling.annotation.EnableScheduling; // Importante para o agendamento
 import org.springframework.security.crypto.password.PasswordEncoder;
 
 import java.util.Optional;
+import java.util.TimeZone;
 
 @SpringBootApplication
+@EnableScheduling // <--- 1. ISSO ATIVA O AGENDADOR AUTOMÁTICO
 public class EscalaServicoApplication implements CommandLineRunner {
 
     @Autowired
@@ -21,6 +25,13 @@ public class EscalaServicoApplication implements CommandLineRunner {
 
     public static void main(String[] args) {
         SpringApplication.run(EscalaServicoApplication.class, args);
+    }
+
+    // <--- 2. ISSO GARANTE O HORÁRIO DE BRASÍLIA
+    @PostConstruct
+    public void init() {
+        TimeZone.setDefault(TimeZone.getTimeZone("America/Sao_Paulo"));
+        System.out.println("--- Fuso horário definido para: " + TimeZone.getDefault().getID() + " ---");
     }
 
     @Override

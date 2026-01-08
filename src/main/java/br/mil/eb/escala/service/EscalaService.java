@@ -8,6 +8,7 @@ import br.mil.eb.escala.repository.FeriadoRepository;
 import br.mil.eb.escala.repository.MilitarRepository;
 import br.mil.eb.escala.repository.UsuarioRepository;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.scheduling.annotation.Scheduled; // <--- IMPORT NOVO AQUI
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
@@ -15,8 +16,6 @@ import java.time.DayOfWeek;
 import java.time.LocalDate;
 import java.util.List;
 import java.util.Optional;
-
-
 
 @Service
 public class EscalaService {
@@ -36,11 +35,9 @@ public class EscalaService {
     // --- LÓGICA DE ESCALA (DASHBOARD) ---
     
     public List<Militar> getMilitaresOrdenadosParaEscala() {
-        // Busca a lista bruta do banco (ativos e não marcados como externo HOJE)
         List<Militar> todos = militarRepository.findByAtivoNaEscalaTrueAndEmServicoExternoFalseOrderByFolgaDesc();
         LocalDate ontem = LocalDate.now().minusDays(1);
         
-        // FILTRO: Remove quem trabalhou ONTEM (descanso de 24h)
         return todos.stream()
                 .filter(m -> m.getDataUltimoServico() == null || !m.getDataUltimoServico().equals(ontem))
                 .toList();
@@ -71,7 +68,6 @@ public class EscalaService {
     }
 
     public void salvarNovoMilitar(Militar militar) {
-        // militar.setFolga(0); // COMENTADO PARA PERMITIR CARGA INICIAL COM FOLGA MANUAL
         militar.setAtivoNaEscala(true);
         militar.setEmServicoExterno(false); 
         militar.setDataUltimoServico(LocalDate.now()); 
@@ -106,7 +102,6 @@ public class EscalaService {
         }
     }
 
-    // ESTE É O MÉTODO QUE ESTAVA FALTANDO OU NÃO FOI ENCONTRADO
     public List<Militar> getMilitaresInativos() {
         return militarRepository.findAll().stream()
                 .filter(m -> !m.isAtivoNaEscala()).toList();
@@ -125,11 +120,16 @@ public class EscalaService {
 
     // --- MOTOR DA ESCALA (AVANÇAR DIA) ---
     
+    // --- AQUI ESTÁ A CORREÇÃO PRINCIPAL ---
+    // Roda todo dia à meia-noite (00:00:00) no horário de Brasília
+    @Scheduled(cron = "0 0 0 * * *", zone = "America/Sao_Paulo")
     public void avancarDiaDaEscala() {
+        System.out.println("--- EXECUTANDO ESCALA AUTOMÁTICA: " + LocalDate.now() + " ---");
+        
         LocalDate hoje = LocalDate.now();
 
         if (!isDiaUtil(hoje)) {
-            System.out.println("Avançar Dia IGNORADO: Não é dia útil.");
+            System.out.println("Escala não rodou pois hoje não é dia útil (Sábado, Domingo ou Feriado).");
             return;
         }
 
@@ -146,10 +146,9 @@ public class EscalaService {
             
             // CASO 2: Tirou Serviço Externo (Marcado pelo ADM)
             } else if (m.isEmServicoExterno()) {
-                // REGRA CORRIGIDA: Folga NÃO zera, continua contando!
                 m.setFolga(m.getFolga() + 1); 
-                m.setDataUltimoServico(hoje); // Marca trabalho hoje para bloquear amanhã
-                m.setEmServicoExterno(false); // Limpa flag externo
+                m.setDataUltimoServico(hoje);
+                m.setEmServicoExterno(false); 
 
             // CASO 3: Estava de Folga
             } else {
@@ -196,7 +195,7 @@ public class EscalaService {
             sai.setFolga(0);
             sai.setDataUltimoServico(LocalDate.now());
             militarRepository.save(sai);
-            // Quem recebe (entra) mantém a folga
+            // Quem recebe (entra) mantém a folga (ou aumenta, dependendo da sua regra de negócio)
         }
     }
     
@@ -226,7 +225,7 @@ public class EscalaService {
     }
 
     public void deletarUsuario(Long id) {
-        if (id != 1L) { // Protege o root
+        if (id != 1L) { 
             usuarioRepository.deleteById(id);
         }
     }
