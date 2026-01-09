@@ -8,14 +8,13 @@ import br.mil.eb.escala.repository.FeriadoRepository;
 import br.mil.eb.escala.repository.MilitarRepository;
 import br.mil.eb.escala.repository.UsuarioRepository;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.scheduling.annotation.Scheduled; // <--- IMPORT NOVO AQUI
+import org.springframework.scheduling.annotation.Scheduled; 
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
 import java.time.DayOfWeek;
 import java.time.LocalDate;
 import java.util.List;
-import java.util.Optional;
 
 @Service
 public class EscalaService {
@@ -35,7 +34,10 @@ public class EscalaService {
     // --- LÓGICA DE ESCALA (DASHBOARD) ---
     
     public List<Militar> getMilitaresOrdenadosParaEscala() {
+        // Busca quem está apto
         List<Militar> todos = militarRepository.findByAtivoNaEscalaTrueAndEmServicoExternoFalseOrderByFolgaDesc();
+        
+        // Regra: Quem tirou serviço ontem não pode tirar hoje (dobra)
         LocalDate ontem = LocalDate.now().minusDays(1);
         
         return todos.stream()
@@ -70,7 +72,7 @@ public class EscalaService {
     public void salvarNovoMilitar(Militar militar) {
         militar.setAtivoNaEscala(true);
         militar.setEmServicoExterno(false); 
-        militar.setDataUltimoServico(LocalDate.now()); 
+        militar.setDataUltimoServico(LocalDate.now()); // Começa zerado
         militarRepository.save(militar);
     }
     
@@ -79,6 +81,7 @@ public class EscalaService {
         if (original != null) {
             original.setGraduacao(dados.getGraduacao());
             original.setNomeGuerra(dados.getNomeGuerra());
+            // Se precisar editar antiguidade, adicione aqui
             militarRepository.save(original);
         }
     }
@@ -118,44 +121,46 @@ public class EscalaService {
         }
     }
 
-    // --- MOTOR DA ESCALA (AVANÇAR DIA) ---
+    // --- MOTOR DA ESCALA (AQUI ESTÁ A LÓGICA DO FIM DE SEMANA) ---
     
-    // --- AQUI ESTÁ A CORREÇÃO PRINCIPAL ---
-    // Roda todo dia à meia-noite (00:00:00) no horário de Brasília
+    // Roda todo dia à meia-noite (00:00:00)
     @Scheduled(cron = "0 0 0 * * *", zone = "America/Sao_Paulo")
     public void avancarDiaDaEscala() {
-        System.out.println("--- EXECUTANDO ESCALA AUTOMÁTICA: " + LocalDate.now() + " ---");
-        
         LocalDate hoje = LocalDate.now();
+        System.out.println("--- TENTATIVA DE RODAR ESCALA: " + hoje + " ---");
 
+        // [IMPORTANTE] Se for Sábado, Domingo ou Feriado, o sistema PARA aqui.
+        // Ninguém ganha folga, ninguém é escalado. O sistema "congela" até segunda.
         if (!isDiaUtil(hoje)) {
-            System.out.println("Escala não rodou pois hoje não é dia útil (Sábado, Domingo ou Feriado).");
-            return;
+            System.out.println("Hoje é " + hoje.getDayOfWeek() + " ou feriado. Escala pausada.");
+            return; 
         }
+
+        // Se passou daqui, é dia útil (Segunda a Sexta sem feriado)
+        System.out.println("Dia útil detectado. Rodando escala...");
 
         Militar proximo = getProximoDaEscala();
         List<Militar> todos = militarRepository.findAll();
 
         for (Militar m : todos) {
             
-            // CASO 1: Tirou Serviço Interno (Permanência)
+            // CASO 1: É o militar escalado para HOJE
             if (proximo != null && m.getId().equals(proximo.getId())) {
-                m.setFolga(0); // Zera a folga
+                m.setFolga(0); // Zera a folga (vai pro final da fila)
                 m.setDataUltimoServico(hoje);
                 m.setEmServicoExterno(false);
             
-            // CASO 2: Tirou Serviço Externo (Marcado pelo ADM)
+            // CASO 2: Está em missão/serviço externo (não concorre mas ganha folga)
             } else if (m.isEmServicoExterno()) {
                 m.setFolga(m.getFolga() + 1); 
-                m.setDataUltimoServico(hoje);
-                m.setEmServicoExterno(false); 
+                m.setDataUltimoServico(hoje); // Atualiza data para controle
 
-            // CASO 3: Estava de Folga
+            // CASO 3: Está de folga normal
             } else {
-                m.setFolga(m.getFolga() + 1);
+                m.setFolga(m.getFolga() + 1); // Ganha +1 ponto de folga
                 m.setEmServicoExterno(false); 
                 
-                // Reativação automática
+                // Verifica se o afastamento acabou hoje e reativa o militar
                 if (!m.isAtivoNaEscala() && m.getDataFimAfastamento() != null && 
                    (m.getDataFimAfastamento().isEqual(hoje) || m.getDataFimAfastamento().isBefore(hoje))) {
                         reativarMilitar(m.getId());
@@ -165,10 +170,14 @@ public class EscalaService {
         militarRepository.saveAll(todos);
     }
     
+    // Método auxiliar para checar se deve ter expediente
     private boolean isDiaUtil(LocalDate data) {
         DayOfWeek dia = data.getDayOfWeek();
+        // Se for Sábado ou Domingo, retorna Falso
         if (dia == DayOfWeek.SATURDAY || dia == DayOfWeek.SUNDAY) return false;
+        // Se for feriado cadastrado no banco, retorna Falso
         if (feriadoRepository.existsByData(data)) return false;
+        
         return true;
     }
     
@@ -191,11 +200,15 @@ public class EscalaService {
         Militar entra = findMilitarById(idEntra);
 
         if (sai != null && entra != null) {
-            // Quem paga (sai) tem a folga zerada
+            // Quem pediu para SAIR perde a vez (vai pro fim da fila como se tivesse tirado)
             sai.setFolga(0);
             sai.setDataUltimoServico(LocalDate.now());
             militarRepository.save(sai);
-            // Quem recebe (entra) mantém a folga (ou aumenta, dependendo da sua regra de negócio)
+            
+            // Quem ENTROU mantém sua folga (faz o serviço "na camaradagem" ou troca acordada)
+            // Obs: Se quiser que quem entra TAMBÉM perca a folga, adicione:
+            // entra.setFolga(0);
+            // militarRepository.save(entra);
         }
     }
     
@@ -225,7 +238,7 @@ public class EscalaService {
     }
 
     public void deletarUsuario(Long id) {
-        if (id != 1L) { 
+        if (id != 1L) { // Proteção para não deletar o admin principal
             usuarioRepository.deleteById(id);
         }
     }
