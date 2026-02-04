@@ -11,7 +11,6 @@ public class PageController {
 
     private final EscalaService escalaService;
 
-    // Injeção de dependência via construtor (Melhor prática do Spring)
     public PageController(EscalaService escalaService) {
         this.escalaService = escalaService;
     }
@@ -23,16 +22,20 @@ public class PageController {
     
     @GetMapping("/dashboard")
     public String getDashboardPage(Model model) {
-        // 'var' detecta automaticamente o tipo (Java 10+)
+        // Busca a lista completa para a tabela
         var militares = escalaService.getTodosMilitaresParaDashboard();
-        var proximo = escalaService.getProximoDaEscala();
+        
+        // CORREÇÃO AQUI: Mudamos o nome do método no Service para 'getProximoPermanencia'
+        var proximo = escalaService.getProximoPermanencia();
+        
+        // O substituto (o segundo da fila)
         var substituto = escalaService.getProximoSubstituto();
 
         model.addAttribute("listaMilitares", militares);
-        model.addAttribute("servicoHoje", proximo);
-        model.addAttribute("substitutoAmanha", substituto);
+        model.addAttribute("servicoHoje", proximo);       // Quem tira o serviço
+        model.addAttribute("substitutoAmanha", substituto); // Quem é o reserva/próximo
         
-        // Lógica simplificada: Se proximo existir pega o ID, senão nulo.
+        // Passa o ID do próximo para o botão de "Trocar" no front-end saber quem tirar
         Long proximoId = (proximo != null) ? proximo.getId() : null;
         model.addAttribute("proximoMilitarId", proximoId);
 
