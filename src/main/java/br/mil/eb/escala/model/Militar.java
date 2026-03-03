@@ -19,21 +19,24 @@ public class Militar {
     private String nomeGuerra;
     
     @Column(nullable = false)
-    private String graduacao; // Ex: Soldado, Cabo, Sargento
+    private String graduacao; 
 
-    // DICA: Use este campo para ordenar a fila da escala (quem é mais antigo)
-    // Se não usar, a escala vai seguir a ordem de cadastro (ID)
-    // private Integer antiguidade; 
+    // Número de folgas acumuladas (contadas de segunda a sexta-feira).
+    // O Administrador poderá modificar este valor manualmente no sistema.
+    private int folga; 
 
-    private int folga; // Quantos dias/serviços de folga ele tem acumulado
-
+    // Mantém o registo da data do último serviço tirado.
+    // A lógica do sistema apenas atualizará esta data quando o militar for o Permanência.
     private LocalDate dataUltimoServico;
 
     @Column(columnDefinition = "boolean default false")
-    private boolean emServicoExterno; // Missão, etc.
+    private boolean emServicoExterno; 
+
+    // Necessário para calcular o descanso exato de 48h após um serviço externo.
+    private LocalDate dataFimServicoExterno; 
 
     @Column(columnDefinition = "boolean default true")
-    private boolean ativoNaEscala; // Se está pronto para o serviço
+    private boolean ativoNaEscala; 
 
     private LocalDate dataInicioAfastamento;
     private LocalDate dataFimAfastamento;
@@ -41,13 +44,25 @@ public class Militar {
     @Enumerated(EnumType.STRING)
     private MotivoInatividade motivoAfastamento;
     
-    // Método auxiliar para saber se o militar pode tirar serviço hoje
+    // Método que verifica se o militar está apto para ser escalado numa determinada data
     public boolean estaAptoParaServico(LocalDate dataServico) {
         if (!ativoNaEscala) return false;
+        if (emServicoExterno) return false; // Bloqueia se estiver atualmente em missão
         
-        // Verifica se está afastado na data do serviço
+        // 1. Verifica se está com afastamento (férias, dispensa, etc.) na data do serviço
         if (dataInicioAfastamento != null && dataFimAfastamento != null) {
-            return dataServico.isBefore(dataInicioAfastamento) || dataServico.isAfter(dataFimAfastamento);
+            if (!dataServico.isBefore(dataInicioAfastamento) && !dataServico.isAfter(dataFimAfastamento)) {
+                return false;
+            }
+        }
+
+        // 2. Regra das 48 horas (Serviço Externo)
+        // Se concluiu um serviço externo, tem de cumprir 2 dias (48h) de descanso
+        if (dataFimServicoExterno != null) {
+            LocalDate dataLiberacao = dataFimServicoExterno.plusDays(2);
+            if (dataServico.isBefore(dataLiberacao)) {
+                return false; // Bloqueado: Ainda se encontra no período de 48h de descanso
+            }
         }
         
         return true;
