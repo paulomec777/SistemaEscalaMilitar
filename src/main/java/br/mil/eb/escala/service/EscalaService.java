@@ -22,58 +22,43 @@ import java.util.stream.Collectors;
 @Service
 public class EscalaService {
 
-    @Autowired
-    private MilitarRepository militarRepository;
-    
-    @Autowired
-    private FeriadoRepository feriadoRepository;
-    
-    @Autowired
-    private UsuarioRepository usuarioRepository;
-    
-    @Autowired
-    private PasswordEncoder passwordEncoder;
+    @Autowired private MilitarRepository militarRepository;
+    @Autowired private FeriadoRepository feriadoRepository;
+    @Autowired private UsuarioRepository usuarioRepository;
+    @Autowired private PasswordEncoder passwordEncoder;
 
-    // --- LÓGICA DE ESCALA (DASHBOARD) ---
+    // --- LÓGICA DE ESCALA ---
     
     public List<Militar> getMilitaresOrdenadosParaEscala() {
         LocalDate hoje = LocalDate.now();
         LocalDate ontem = hoje.minusDays(1);
-        
-        // Busca todos e aplica a ordenação e os filtros complexos da classe Militar
         List<Militar> todos = militarRepository.findAll();
         
         return todos.stream()
-                .filter(m -> m.estaAptoParaServico(hoje)) // Verifica Ativo, Missão, Férias e o Descanso de 48h
-                .filter(m -> m.getDataUltimoServico() == null || !m.getDataUltimoServico().equals(ontem)) // Impede dobra de serviço
-                // Ordena primeiro por quem tem MAIS folga, e em caso de empate, pela DATA MAIS ANTIGA
+                .filter(m -> m.estaAptoParaServico(hoje)) 
+                .filter(m -> m.getDataUltimoServico() == null || !m.getDataUltimoServico().equals(ontem)) 
                 .sorted(Comparator.comparing(Militar::getFolga).reversed()
                         .thenComparing(Militar::getDataUltimoServico, Comparator.nullsFirst(Comparator.naturalOrder())))
                 .collect(Collectors.toList());
     }
 
-    // O "01" da fila (Mais folgado = Permanência)
     public Militar getProximoPermanencia() {
         List<Militar> ordenados = getMilitaresOrdenadosParaEscala();
         return ordenados.isEmpty() ? null : ordenados.get(0);
     }
     
-    // O "02" da fila (Imediatamente após o mais folgado = Substituto)
     public Militar getProximoSubstituto() {
         List<Militar> ordenados = getMilitaresOrdenadosParaEscala();
         return ordenados.size() < 2 ? null : ordenados.get(1); 
     }
 
     public List<Militar> getTodosMilitaresParaDashboard() {
-        // Mostra quem está ativo primeiro e ordena pelas folgas no painel
         return militarRepository.findAll().stream()
                 .sorted(Comparator.comparing(Militar::isAtivoNaEscala).reversed()
                         .thenComparing(Militar::getFolga).reversed())
                 .collect(Collectors.toList());
     }
 
-    // --- FUNCIONALIDADE: ALTERAR FOLGA MANUALMENTE ---
-    
     @Transactional
     public void atualizarFolgaManual(Long idMilitar, int novaFolga) {
         Militar militar = findMilitarById(idMilitar);
@@ -83,31 +68,19 @@ public class EscalaService {
         }
     }
 
-    // --- MOTOR DA ESCALA (Lógica de Dias Úteis e Fim de Semana) ---
+    // --- MOTOR DA ESCALA ---
     
-    // Roda todo dia à meia-noite
     @Scheduled(cron = "0 0 0 * * *", zone = "America/Sao_Paulo")
     @Transactional 
     public void avancarDiaDaEscala() {
         LocalDate hoje = LocalDate.now();
-        System.out.println("--- RODANDO MOTOR DA ESCALA: " + hoje + " ---");
-
-        boolean ehDiaDeServico = isDiaUtil(hoje); // Verifica se é Seg-Sex (sem feriado)
-
-        // Se for dia útil, pegamos o Permanência para zerar a folga.
+        boolean ehDiaDeServico = isDiaUtil(hoje); 
         Militar permanencia = ehDiaDeServico ? getProximoPermanencia() : null;
         
-        if (!ehDiaDeServico) {
-            System.out.println("Fim de Semana/Feriado: Ninguém é escalado e as folgas NÃO aumentam.");
-        } else {
-            System.out.println("Dia Útil. Escalado: " + (permanencia != null ? permanencia.getNomeGuerra() : "Ninguém"));
-        }
-
         List<Militar> todos = militarRepository.findAll();
 
         for (Militar m : todos) {
-            
-            // Verifica se o afastamento (férias/dispensa) acabou hoje e reativa na escala automaticamente
+            // Reativar afastamentos vencidos
             if (!m.isAtivoNaEscala() && m.getDataFimAfastamento() != null && 
                (m.getDataFimAfastamento().isEqual(hoje) || m.getDataFimAfastamento().isBefore(hoje))) {
                     m.setAtivoNaEscala(true);
@@ -116,29 +89,25 @@ public class EscalaService {
                     m.setDataFimAfastamento(null);
             }
 
-            // A CONTAGEM DAS FOLGAS SÓ ACONTECE EM DIAS ÚTEIS (Seg a Sex)
             if (ehDiaDeServico) {
-                // CASO 1: É o PERMANÊNCIA DO DIA
                 if (permanencia != null && m.getId().equals(permanencia.getId())) {
-                    m.setFolga(0); // Zera a folga (vai pro final da fila de amanhã)
-                    m.setDataUltimoServico(hoje); // Crava a data do último serviço
-                    m.setEmServicoExterno(false);
-                } 
-                // CASO 2: Qualquer outro militar (Substituto ou quem está em casa)
-                else {
-                    // Ganha +1 de folga porque não tirou serviço hoje
+                    m.setFolga(0); 
+                    m.setDataUltimoServico(hoje); 
+                } else {
                     m.setFolga(m.getFolga() + 1); 
                     
-                    // Se estiver em missão externa, também atualizamos a data do último serviço
-                    // para não ficar como se estivesse devendo serviço interno há meses
-                    if (m.isEmServicoExterno()) {
-                        m.setDataUltimoServico(hoje); 
+                    // Verifica se está em Missão Externa EXATAMENTE hoje
+                    boolean emMissaoHoje = m.getDataInicioServicoExterno() != null && m.getDataFimServicoExterno() != null
+                            && !hoje.isBefore(m.getDataInicioServicoExterno()) 
+                            && !hoje.isAfter(m.getDataFimServicoExterno());
+
+                    if (emMissaoHoje) {
+                        m.setDataUltimoServico(hoje); // Crava o serviço enquanto ele viaja
                     }
                 }
             }
         }
-        
-        militarRepository.saveAll(todos); // Salva todas as alterações no banco de uma vez só
+        militarRepository.saveAll(todos); 
     }
     
     // --- LÓGICA DE CRUD E UTILITÁRIOS ---
@@ -153,7 +122,6 @@ public class EscalaService {
 
     public void salvarNovoMilitar(Militar militar) {
         militar.setAtivoNaEscala(true);
-        militar.setEmServicoExterno(false); 
         militar.setDataUltimoServico(LocalDate.now()); 
         militarRepository.save(militar);
     }
@@ -168,13 +136,9 @@ public class EscalaService {
     }
     
     public void deletarMilitar(Long id) {
-        if (militarRepository.existsById(id)) {
-            militarRepository.deleteById(id);
-        }
+        if (militarRepository.existsById(id)) militarRepository.deleteById(id);
     }
 
-    // --- LÓGICA DE AFASTAMENTO E SERVIÇO EXTERNO ---
-    
     public void afastarMilitar(Long id, MotivoInatividade motivo, LocalDate inicio, LocalDate fim) {
         Militar militar = findMilitarById(id);
         if (militar != null) {
@@ -187,8 +151,7 @@ public class EscalaService {
     }
 
     public List<Militar> getMilitaresInativos() {
-        return militarRepository.findAll().stream()
-                .filter(m -> !m.isAtivoNaEscala()).toList();
+        return militarRepository.findAll().stream().filter(m -> !m.isAtivoNaEscala()).toList();
     }
     
     public void reativarMilitar(Long id) {
@@ -209,21 +172,22 @@ public class EscalaService {
         return true;
     }
     
-    public void marcarServicoExterno(Long id) {
+    // NOVO: Agendar Missão Externa
+    public void agendarServicoExterno(Long id, LocalDate inicio, LocalDate fim) {
         Militar m = findMilitarById(id);
         if (m != null) { 
-            m.setEmServicoExterno(true); 
-            m.setDataFimServicoExterno(null); // Limpa caso houvesse data de missões antigas
+            m.setDataInicioServicoExterno(inicio);
+            m.setDataFimServicoExterno(fim); 
             militarRepository.save(m); 
         }
     }
 
-    public void limparStatusExterno(Long id) {
+    // NOVO: Cancelar Missão Externa
+    public void cancelarServicoExterno(Long id) {
         Militar m = findMilitarById(id);
         if (m != null) { 
-            m.setEmServicoExterno(false); 
-            // INÍCIO DO DESCANSO DE 48 HORAS: Registra a data em que o serviço externo acabou
-            m.setDataFimServicoExterno(LocalDate.now()); 
+            m.setDataInicioServicoExterno(null);
+            m.setDataFimServicoExterno(null); 
             militarRepository.save(m); 
         }
     }
@@ -231,16 +195,12 @@ public class EscalaService {
     public void processarTroca(Long idSai, Long idEntra) {
         Militar sai = findMilitarById(idSai);
         Militar entra = findMilitarById(idEntra);
-
         if (sai != null && entra != null) {
-            // CORREÇÃO: Quem ENTRA para assumir o serviço do amigo é quem gasta a folga e zera
             entra.setFolga(0);
             entra.setDataUltimoServico(LocalDate.now());
             militarRepository.save(entra);
         }
     }
-    
-    // --- LÓGICA DE FERIADOS E USUÁRIOS (MANTIDA IGUAL) ---
     
     public List<Feriado> getTodosFeriados() { return feriadoRepository.findAllByOrderByDataAsc(); }
     public void salvarFeriado(Feriado f) { feriadoRepository.save(f); }

@@ -4,37 +4,19 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Admin - Controle da Escala</title>
+    <title>Serviço Externo / Missões - CSUP</title>
     <link rel="stylesheet" th:href="@{/css/style.css}">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <style>
-        .badge {
-            padding: 0.35em 0.65em;
-            font-size: 0.85em;
-            font-weight: 700;
-            border-radius: 0.25rem;
-            color: #fff;
-            display: inline-block;
-            text-align: center;
-            min-width: 80px;
+        .form-container {
+            display: flex; gap: 1rem; align-items: flex-end; flex-wrap: wrap;
+            background-color: #f8f9fa; padding: 1.5rem; border-radius: 8px; border: 1px solid #ddd;
         }
-        .badge-success { background-color: #28a745; }
-        .badge-warning { background-color: #ffc107; color: #212529; }
-        .badge-info { background-color: #17a2b8; }
-        
-        .btn-acao {
-            width: 100%;
-            padding: 0.4rem 0.5rem;
-            font-size: 0.85rem;
-            border: none;
-            border-radius: 4px;
-            cursor: pointer;
-            color: white;
-            font-weight: 600;
-            transition: opacity 0.2s;
+        .form-group { flex: 1; min-width: 200px; }
+        .form-group label { display: block; font-weight: bold; margin-bottom: 0.5rem; color: #333; }
+        .form-group input, .form-group select { 
+            width: 100%; padding: 0.6rem; border: 1px solid #ccc; border-radius: 4px; font-size: 1rem;
         }
-        .btn-acao:hover { opacity: 0.9; }
-        .btn-queimar { background-color: #dc3545; }
-        .btn-limpar { background-color: #6c757d; }
     </style>
 </head>
 <body>
@@ -43,79 +25,110 @@
         <div class="logo">Permanência CSUP</div>
         <nav>
             <a th:href="@{/dashboard}">Escala</a>
-            <a th:href="@{/admin/novo-militar}">Cadastrar Militar</a>
-            <a th:href="@{/admin/afastar}">Impedimentos</a>
-            <a th:href="@{/admin/controle}" style="text-decoration: underline;">Sv.Externo</a>
-            <a th:href="@{/admin/troca}">Troca de Serviço</a>   
-            <a th:href="@{/admin/usuarios}">Administradores</a>
-            
+            <span sec:authorize="hasRole('ADM')">
+                <a th:href="@{/admin/novo-militar}">Cadastrar Militar</a>
+                <a th:href="@{/admin/afastar}">Impedimentos</a>
+                <a th:href="@{/admin/controle}" style="text-decoration: underline;">Sv.Externo</a>
+                <a th:href="@{/admin/troca}">Troca de Serviço</a>
+                <a th:href="@{/admin/usuarios}">Administradores</a>
+            </span>
             <form th:action="@{/logout}" method="post" style="display: inline;">
-                <button type="submit" class="btn-primary" style="background: none; border: none; font-size: 1rem; margin-left: 1rem; cursor: pointer; color: white;">
-                    Sair
-                </button>
+                <button type="submit" class="btn-primary" style="background: none; border: none; font-size: 1rem; margin-left: 1rem; cursor: pointer; color: white;">Sair</button>
             </form>
         </nav>
     </header>
 
     <div class="main-container">
         
-        <div class="card" style="max-width: 1000px; margin: 0 auto;">
-            <div class="card-header">
-                <h2>Controle de Serviço Externo</h2>
+        <div class="card">
+            <div class="card-header" style="border-bottom: none; padding-bottom: 0;">
+                <h2 style="color: #2C3E50;"><i class="fas fa-plane-departure"></i> Agendar Serviço Externo (Missão)</h2>
             </div>
-            
-            <div style="background-color: #e9ecef; padding: 1rem; border-radius: 8px; margin-bottom: 1.5rem; border-left: 5px solid #17a2b8;">
-                <p style="margin: 0; color: #495057; font-size: 0.95rem;">
-                    <strong>Instruções:</strong> Marque aqui os militares que estão tirando serviço fora da OM (ex: Guarda, Missão Externa) no dia de hoje.
-                    <br>
-                    <!-- TEXTO CORRIGIDO ABAIXO -->
-                    Eles serão removidos da escala de hoje e não concorrerão amanhã (descanso), <strong>mas a folga continuará contando normalmente.</strong>
-                </p>
-            </div>
+            <p style="color: #666; margin-top: 0; margin-bottom: 1.5rem;">
+                O militar será <strong>bloqueado na escala</strong> durante este período. O sistema concederá automaticamente <strong>48h de descanso</strong> após a Data de Retorno.
+            </p>
+
+            <form th:action="@{/admin/agendar-externo}" th:object="${externoForm}" method="post" class="form-container">
+                
+                <div class="form-group">
+                    <label>Selecione o Militar</label>
+                    <select th:field="*{militarId}" required>
+                        <option value="">-- Escolha da Lista --</option>
+                        <option th:each="m : ${listaMilitaresAtivos}" 
+                                th:value="${m.id}" 
+                                th:text="${m.graduacao + ' ' + m.nomeGuerra}"></option>
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label>Data de Início</label>
+                    <input type="date" th:field="*{dataInicio}" required>
+                </div>
+
+                <div class="form-group">
+                    <label>Data de Retorno (Fim)</label>
+                    <input type="date" th:field="*{dataFim}" required>
+                </div>
+
+                <div>
+                    <button type="submit" class="btn-primary" style="background-color: #3498DB; border-color: #3498DB; padding: 0.7rem 1.5rem; font-size: 1rem;">
+                        <i class="fas fa-calendar-check"></i> Lançar Missão
+                    </button>
+                </div>
+            </form>
+        </div>
+
+        <div class="card" style="margin-top: 2rem;">
+            <h2>Controle de Militares em Missão</h2>
             
             <table class="escala-table">
                 <thead>
                     <tr>
                         <th style="width: 30%;">Militar</th>
-                        <th style="width: 10%; text-align: center;">Folga</th>
-                        <th style="width: 25%; text-align: center;">Status Atual</th>
-                        <th style="width: 35%; text-align: center;">Ação</th>
+                        <th style="width: 20%; text-align: center;">Início da Missão</th>
+                        <th style="width: 20%; text-align: center;">Fim da Missão</th>
+                        <th style="width: 15%; text-align: center;">Status Atual</th>
+                        <th style="width: 15%; text-align: center;">Ações</th>
                     </tr>
                 </thead>
                 <tbody>
-                    <tr th:each="militar : ${listaMilitares}">
+                    <tr th:each="militar : ${listaGeral}" th:if="${militar.dataInicioServicoExterno != null}">
+                        <td th:text="${militar.graduacao + ' ' + militar.nomeGuerra}" style="font-weight: 600;"></td>
                         
-                        <td th:text="${militar.graduacao + ' ' + militar.nomeGuerra}" style="font-weight: 500;">Sgt Silva</td>
-                        
-                        <td th:text="${militar.folga}" style="text-align: center;">15</td>
+                        <td style="text-align: center;" th:text="${#temporals.format(militar.dataInicioServicoExterno, 'dd/MM/yyyy')}"></td>
+                        <td style="text-align: center; font-weight: bold;" th:text="${#temporals.format(militar.dataFimServicoExterno, 'dd/MM/yyyy')}"></td>
                         
                         <td style="text-align: center;">
-                            <span th:if="${militar.ativoNaEscala and !militar.emServicoExterno}" class="badge badge-success">Disponível</span>
-                            <span th:unless="${militar.ativoNaEscala}" class="badge badge-warning" th:text="${militar.motivoAfastamento.getDescricao()}">Férias</span>
-                            <span th:if="${militar.emServicoExterno}" class="badge badge-info">Serviço Externo</span>
+                            <span class="badge badge-info">Agendado</span>
                         </td>
                         
-                        <td sec:authorize="hasRole('ADM')" style="text-align: center;">
-                            <form th:if="${militar.ativoNaEscala and !militar.emServicoExterno}" 
-                                  th:action="@{/admin/marcar-externo/{id}(id=${militar.id})}" 
-                                  method="post" style="margin: 0;">
-                                <button type="submit" class="btn-acao btn-queimar">Marcar Externo</button>
+                        <td style="text-align: center;">
+                            <form th:action="@{/admin/cancelar-externo/{id}(id=${militar.id})}" method="post" style="display: inline;">
+                                <button type="submit" class="btn-acao" 
+                                        style="background-color: #E74C3C; text-decoration: none; padding: 0.3rem 0.6rem; border: none; border-radius: 4px; color: white; cursor: pointer;"
+                                        onclick="return confirm('Tem certeza que deseja Cancelar/Remover esta missão? O militar voltará imediatamente para a escala normal.');"
+                                        title="Remover Missão">
+                                    <i class="fas fa-times"></i> Cancelar
+                                </button>
                             </form>
-                            
-                            <form th:if="${militar.emServicoExterno}" 
-                                  th:action="@{/admin/limpar-externo/{id}(id=${militar.id})}" 
-                                  method="post" style="margin: 0;">
-                                <button type="submit" class="btn-acao btn-limpar">Desfazer (Voltar p/ Escala)</button>
-                            </form>
-                            
-                            <span th:unless="${militar.ativoNaEscala}" style="color: #999; font-size: 0.9rem;">-</span>
+                        </td>
+                    </tr>
+                    
+                    <tr th:if="${#lists.isEmpty(listaGeral.?[dataInicioServicoExterno != null])}">
+                        <td colspan="5" style="text-align: center; padding: 2rem; color: #999;">
+                            <i class="fas fa-check-circle" style="font-size: 2rem; color: #2ECC71; margin-bottom: 10px; display: block;"></i>
+                            Nenhum militar com missão externa agendada no momento.
                         </td>
                     </tr>
                 </tbody>
             </table>
-            
         </div>
+        
     </div>
+    
+    <footer style="text-align: center; padding: 20px; background-color: #f1f1f1; margin-top: 50px;">
+        <p>Sistema de Escala Militar &copy; 2026</p>
+    </footer>
 
 </body>
 </html>

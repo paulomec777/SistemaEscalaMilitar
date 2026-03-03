@@ -20,11 +20,12 @@ public class AdminController {
     @Autowired 
     private EscalaService escalaService;
 
-    // --- RECORD (DTO) PARA AFASTAMENTO (JAVA 21) ---
-    // Mantive o Record pois é nativo do Java e ajuda na organização
     public record AfastamentoForm(Long militarId, MotivoInatividade motivo, LocalDate dataInicio, LocalDate dataFim) {}
+    
+    // NOVO DTO para agendar a Missão
+    public record ServicoExternoForm(Long militarId, LocalDate dataInicio, LocalDate dataFim) {}
 
-    // --- MILITAR (Adicionar, Editar, Deletar) ---
+    // --- MILITAR ---
     @GetMapping("/novo-militar")
     public String getFormularioMilitar(Model model) {
         model.addAttribute("militar", new Militar());
@@ -33,7 +34,6 @@ public class AdminController {
 
     @PostMapping("/salvar-militar")
     public String salvarMilitar(@ModelAttribute Militar militar) {
-        // Removido @Valid e BindingResult para não dar erro de importação
         escalaService.salvarNovoMilitar(militar);
         return "redirect:/dashboard";
     }
@@ -46,16 +46,14 @@ public class AdminController {
 
     @PostMapping("/salvar-edicao")
     public String salvarEdicao(@ModelAttribute Militar militar) {
-        // Removido validação
         escalaService.editarMilitar(militar);
         return "redirect:/dashboard";
     }
     
-    // --- NOVA ROTA: ALTERAR FOLGA MANUALMENTE ---
     @PostMapping("/atualizar-folga")
     public String atualizarFolga(@RequestParam("id") Long id, @RequestParam("novaFolga") int novaFolga) {
         escalaService.atualizarFolgaManual(id, novaFolga);
-        return "redirect:/dashboard"; // Retorna para o dashboard atualizado
+        return "redirect:/dashboard"; 
     }
     
     @PostMapping("/deletar/{id}")
@@ -70,19 +68,13 @@ public class AdminController {
         model.addAttribute("listaMilitaresAtivos", escalaService.getMilitaresAtivos());
         model.addAttribute("listaMotivos", MotivoInatividade.values());
         model.addAttribute("listaMilitaresInativos", escalaService.getMilitaresInativos());
-        // Passando null nos campos iniciais do record apenas para inicializar
         model.addAttribute("afastamentoForm", new AfastamentoForm(null, null, LocalDate.now(), LocalDate.now())); 
         return "admin-afastar";
     }
     
     @PostMapping("/salvar-afastamento")
     public String salvarAfastamento(@ModelAttribute AfastamentoForm form) {
-        escalaService.afastarMilitar(
-            form.militarId(), 
-            form.motivo(), 
-            form.dataInicio(), 
-            form.dataFim()
-        );
+        escalaService.afastarMilitar(form.militarId(), form.motivo(), form.dataInicio(), form.dataFim());
         return "redirect:/dashboard";
     }
 
@@ -92,33 +84,34 @@ public class AdminController {
         return "redirect:/admin/afastar";
     }
 
-    // --- MOTOR DA ESCALA ---
     @PostMapping("/avancar-dia")
     public String avancarDia() {
         escalaService.avancarDiaDaEscala();
         return "redirect:/dashboard";
     }
 
-    // --- CONTROLE EXTERNO ---
+    // --- SERVIÇO EXTERNO (AGENDAMENTO NOVO) ---
     @GetMapping("/controle")
     public String getControleEscala(Model model) {
-        model.addAttribute("listaMilitares", escalaService.getTodosMilitaresParaDashboard());
+        model.addAttribute("listaMilitaresAtivos", escalaService.getMilitaresAtivos());
+        model.addAttribute("listaGeral", escalaService.getTodosMilitaresParaDashboard());
+        model.addAttribute("externoForm", new ServicoExternoForm(null, LocalDate.now(), LocalDate.now()));
         return "admin-controle";
     }
 
-    @PostMapping("/marcar-externo/{id}")
-    public String marcarServicoExterno(@PathVariable("id") Long id) {
-        escalaService.marcarServicoExterno(id);
+    @PostMapping("/agendar-externo")
+    public String agendarServicoExterno(@ModelAttribute ServicoExternoForm form) {
+        escalaService.agendarServicoExterno(form.militarId(), form.dataInicio(), form.dataFim());
         return "redirect:/admin/controle";
     }
 
-    @PostMapping("/limpar-externo/{id}")
-    public String limparServicoExterno(@PathVariable("id") Long id) {
-        escalaService.limparStatusExterno(id);
+    @PostMapping("/cancelar-externo/{id}")
+    public String cancelarServicoExterno(@PathVariable("id") Long id) {
+        escalaService.cancelarServicoExterno(id);
         return "redirect:/admin/controle";
     }
 
-    // --- TROCA ---
+    // --- TROCA, FERIADOS E USUÁRIOS ---
     @GetMapping("/troca")
     public String getFormularioTroca(Model model) {
         model.addAttribute("listaMilitaresAtivos", escalaService.getMilitaresAtivos());
@@ -131,7 +124,6 @@ public class AdminController {
         return "redirect:/dashboard";
     }
     
-    // --- FERIADOS ---
     @GetMapping("/feriados")
     public String getFormularioFeriados(Model model) {
         model.addAttribute("listaFeriados", escalaService.getTodosFeriados());
@@ -151,7 +143,6 @@ public class AdminController {
         return "redirect:/admin/feriados";
     }
     
-    // --- USUÁRIOS ---
     @GetMapping("/usuarios")
     public String getFormularioUsuarios(Model model) {
         model.addAttribute("listaUsuarios", escalaService.getTodosUsuarios());
@@ -162,7 +153,6 @@ public class AdminController {
 
     @PostMapping("/salvar-usuario")
     public String salvarUsuario(@ModelAttribute Usuario usuario) {
-        // Removido validação
         escalaService.salvarNovoUsuario(usuario);
         return "redirect:/admin/usuarios";
     }
