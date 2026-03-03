@@ -51,6 +51,13 @@ public class AdminController {
         return "redirect:/dashboard";
     }
     
+    // --- NOVA ROTA: ALTERAR FOLGA MANUALMENTE ---
+    @PostMapping("/atualizar-folga")
+    public String atualizarFolga(@RequestParam("id") Long id, @RequestParam("novaFolga") int novaFolga) {
+        escalaService.atualizarFolgaManual(id, novaFolga);
+        return "redirect:/dashboard"; // Retorna para o dashboard atualizado
+    }
+    
     @PostMapping("/deletar/{id}")
     public String deletarMilitar(@PathVariable("id") Long id) {
         escalaService.deletarMilitar(id);
