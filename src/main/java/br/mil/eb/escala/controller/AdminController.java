@@ -84,9 +84,12 @@ public class AdminController {
         return "redirect:/admin/afastar";
     }
 
-    // NOVO: Rota para atualizar a data do último serviço manualmente
+    // NOVO: Rota para atualizar a data do último serviço manualmente (COM A CORREÇÃO DA DATA)
     @PostMapping("/atualizar-data-servico")
-    public String atualizarDataServico(@RequestParam("id") Long id, @RequestParam("novaData") LocalDate novaData) {
+    public String atualizarDataServico(
+            @RequestParam("id") Long id, 
+            @RequestParam("novaData") @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate novaData) {
+        
         escalaService.atualizarDataUltimoServicoManual(id, novaData);
         return "redirect:/dashboard";
     }
