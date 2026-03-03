@@ -59,9 +59,15 @@ public class Militar {
             LocalDate dataLiberacao = dataFimServicoExterno.plusDays(3);
             if (dataServico.isAfter(dataFimServicoExterno) && dataServico.isBefore(dataLiberacao)) {
                 return false; // Está nas 48h de descanso obrigatório
-            }
+            }            
+            
         }
         
         return true;
+    }
+
+    // Método auxiliar para o Dashboard (HTML) não quebrar ao procurar o status antigo
+    public boolean isEmServicoExterno() {
+        return this.dataInicioServicoExterno != null;
     }
 }
