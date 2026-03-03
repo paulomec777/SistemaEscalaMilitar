@@ -15,8 +15,6 @@ public interface MilitarRepository extends JpaRepository<Militar, Long> {
     // Lista para a Escala (Só os aptos)
     List<Militar> findByAtivoNaEscalaTrue();
 
-    // --- O MÉTODO MÁGICO DO NOVO SERVICE ---
-    // Busca ativos, que não estão em missão, ordena quem tem MAIS folga primeiro.
-    // Se a folga for igual, desempatar por quem tirou serviço há mais tempo (Data Ascendente).
-    List<Militar> findByAtivoNaEscalaTrueAndEmServicoExternoFalseOrderByFolgaDescDataUltimoServicoAsc();
+    // O método antigo com 'EmServicoExterno' foi DELETADO daqui porque 
+    // a inteligência agora fica no Militar.estaAptoParaServico()
 }
