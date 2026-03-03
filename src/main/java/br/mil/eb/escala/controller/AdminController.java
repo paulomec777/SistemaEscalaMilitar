@@ -84,9 +84,10 @@ public class AdminController {
         return "redirect:/admin/afastar";
     }
 
-    @PostMapping("/avancar-dia")
-    public String avancarDia() {
-        escalaService.avancarDiaDaEscala();
+    // NOVO: Rota para atualizar a data do último serviço manualmente
+    @PostMapping("/atualizar-data-servico")
+    public String atualizarDataServico(@RequestParam("id") Long id, @RequestParam("novaData") LocalDate novaData) {
+        escalaService.atualizarDataUltimoServicoManual(id, novaData);
         return "redirect:/dashboard";
     }
 

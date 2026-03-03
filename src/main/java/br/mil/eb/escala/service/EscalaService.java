@@ -68,6 +68,16 @@ public class EscalaService {
         }
     }
 
+    // NOVO: Método para o Admin alterar manualmente a data do Último Serviço
+    @Transactional
+    public void atualizarDataUltimoServicoManual(Long idMilitar, LocalDate novaData) {
+        Militar militar = findMilitarById(idMilitar);
+        if (militar != null) {
+            militar.setDataUltimoServico(novaData);
+            militarRepository.save(militar);
+        }
+    }
+
     // --- MOTOR DA ESCALA ---
     
     @Scheduled(cron = "0 0 0 * * *", zone = "America/Sao_Paulo")
