@@ -10,6 +10,7 @@ import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.format.annotation.DateTimeFormat;
+import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 import java.time.LocalDate;
 
 @Controller
@@ -113,7 +114,7 @@ public class AdminController {
         return "redirect:/admin/controle";
     }
 
-    // --- TROCA ---
+    // --- TROCA COM REGRA DE FOLGA ---
     @GetMapping("/troca")
     public String getFormularioTroca(Model model) {
         model.addAttribute("listaMilitaresAtivos", escalaService.getMilitaresAtivos());
@@ -121,12 +122,26 @@ public class AdminController {
     }
 
     @PostMapping("/salvar-troca")
-    public String salvarTroca(@RequestParam Long militarSaiId, @RequestParam Long militarEntraId) {
+    public String salvarTroca(
+            @RequestParam Long militarSaiId, 
+            @RequestParam Long militarEntraId,
+            @RequestParam(value = "zerarFolga", defaultValue = "false") boolean zerarFolga,
+            RedirectAttributes attributes) {
+        
+        // Se o ADM marcou para zerar, ajustamos o militar que está saindo antes da troca
+        if (zerarFolga) {
+            Militar sai = escalaService.findMilitarById(militarSaiId);
+            sai.setFolga(0);
+            sai.setDataUltimoServico(LocalDate.now());
+            escalaService.editarMilitar(sai);
+            attributes.addFlashAttribute("mensagem", "Troca realizada: folga de " + sai.getNomeGuerra() + " foi ZERADA.");
+        } else {
+            attributes.addFlashAttribute("mensagem", "Troca realizada: folgas preservadas.");
+        }
+
         escalaService.processarTroca(militarSaiId, militarEntraId);
         return "redirect:/dashboard";
     }
-    
-    // REMOVIDO: Rotas de Feriado foram movidas para FeriadoController
     
     // --- USUÁRIOS ---
     @GetMapping("/usuarios")
