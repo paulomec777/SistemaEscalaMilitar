@@ -53,6 +53,21 @@
         .btn-salvar-data:hover {
             background-color: #E67E22;
         }
+        /* Estilo para o botão de Forçar Escala */
+        .btn-forcar {
+            background-color: #e74c3c;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            padding: 5px 10px;
+            cursor: pointer;
+            font-size: 0.8rem;
+            text-decoration: none;
+            display: inline-block;
+        }
+        .btn-forcar:hover {
+            background-color: #c0392b;
+        }
     </style>
 </head>
 <body>
@@ -67,6 +82,7 @@
                 <a th:href="@{/admin/afastar}">Impedimentos</a>
                 <a th:href="@{/admin/controle}">Sv.Externo</a>
                 <a th:href="@{/admin/troca}">Troca de Serviço</a>
+                <a th:href="@{/admin/feriados}">Feriados</a>
                 <a th:href="@{/admin/usuarios}">Administradores</a>
             </span>
             
@@ -103,6 +119,11 @@
                 <div th:if="${servicoHoje}">
                     <h2 style="margin: 0.5rem 0; font-size: 1.8rem;" th:text="${servicoHoje.graduacao + ' ' + servicoHoje.nomeGuerra}">Sgt Silva</h2>
                     <span th:text="${'(Folga ' + servicoHoje.folga + ')'}" style="color: #666; font-weight: 500;">(Folga 15)</span>
+                    <div sec:authorize="hasRole('ADM')" style="margin-top: 15px;">
+                        <a th:href="@{/admin/troca}" class="btn-forcar" style="background-color: #556B2F;">
+                            <i class="fas fa-exchange-alt"></i> Substituir Titular
+                        </a>
+                    </div>
                 </div>
                 <div th:unless="${servicoHoje}">
                     <h2 style="margin: 0.5rem 0; color: #999;">Ninguém escalado</h2>
@@ -114,6 +135,11 @@
                 <div th:if="${substitutoAmanha}">
                     <h2 style="margin: 0.5rem 0; font-size: 1.8rem;" th:text="${substitutoAmanha.graduacao + ' ' + substitutoAmanha.nomeGuerra}">Cb Nascimento</h2>
                     <span th:text="${'(Folga ' + substitutoAmanha.folga + ')'}" style="color: #666; font-weight: 500;">(Folga 14)</span>
+                    <div sec:authorize="hasRole('ADM')" style="margin-top: 15px;">
+                        <a th:href="@{/admin/troca}" class="btn-forcar" style="background-color: #3498DB;">
+                            <i class="fas fa-sync"></i> Mudar Reserva
+                        </a>
+                    </div>
                 </div>
                 <div th:unless="${substitutoAmanha}">
                     <h2 style="margin: 0.5rem 0; color: #999;">Sem Reserva</h2>
@@ -135,11 +161,11 @@
             <table class="escala-table">
                 <thead>
                     <tr>
-                        <th style="width: 25%;">Militar</th>
+                        <th style="width: 20%;">Militar</th>
                         <th style="width: 15%; text-align: center;">Folga</th>
                         <th style="width: 15%; text-align: center;">Status</th>
-                        <th style="width: 25%; text-align: center;">Último Serviço</th>
-                        <th sec:authorize="hasRole('ADM')" style="width: 20%; text-align: center;">Ações</th>
+                        <th style="width: 20%; text-align: center;">Último Serviço</th>
+                        <th sec:authorize="hasRole('ADM')" style="width: 30%; text-align: center;">Ações Administrativas</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -181,18 +207,25 @@
                         </td>
                         
                         <td sec:authorize="hasRole('ADM')" style="text-align: center;">
+                            <a th:href="@{/admin/troca(idEntra=${militar.id})}" 
+                               class="btn-forcar" 
+                               title="Forçar este militar para o serviço de hoje"
+                               style="margin-bottom: 5px; width: 90%;">
+                               <i class="fas fa-hand-pointer"></i> Forçar p/ Hoje
+                            </a>
+                            <br>
                             <a th:href="@{/admin/editar/{id}(id=${militar.id})}" 
                                class="btn-acao" 
                                style="background-color: #3498DB; text-decoration: none; padding: 0.3rem 0.6rem; display: inline-block; margin-right: 5px;"
                                title="Editar Nome/Graduação">
-                               <i class="fas fa-edit"></i> <span style="font-size: 0.85rem;">Nome</span>
+                               <i class="fas fa-edit"></i>
                             </a>
                             
                             <a th:href="@{/admin/afastar(id=${militar.id})}" 
                                class="btn-acao" 
                                style="background-color: #F39C12; text-decoration: none; padding: 0.3rem 0.6rem; display: inline-block;"
                                title="Lançar Impedimento">
-                               <i class="fas fa-user-slash"></i> <span style="font-size: 0.85rem;">Afastar</span>
+                               <i class="fas fa-user-slash"></i>
                             </a>
                         </td>
                     </tr>
