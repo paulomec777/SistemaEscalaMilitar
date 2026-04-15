@@ -4,7 +4,7 @@ public enum MotivoInatividade {
     FERIAS("Férias"),
     ATESTADO("Atestado Médico"),
     MISSAO("Missão"),
-    DISPENSADO("Dispensado"), // <-- NOVA OPÇÃO ADICIONADA AQUI!
+    DISPENSADO("Dispensado"), 
     OUTRO("Outro");
     
     private String descricao;

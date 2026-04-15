@@ -24,12 +24,19 @@ public class Militar {
     private int folga; 
     private LocalDate dataUltimoServico;
 
-    // NOVO: Agendamento do Serviço Externo
+    // Agendamento do Serviço Externo
     private LocalDate dataInicioServicoExterno; 
     private LocalDate dataFimServicoExterno; 
 
     @Column(columnDefinition = "boolean default true")
     private boolean ativoNaEscala; 
+
+    // NOVO: Controle manual do ADM para impedir o militar
+    @Column(columnDefinition = "boolean default true")
+    private boolean disponivelManualmente = true;
+
+    // NOVO: Campo para prescrever o porquê do impedimento
+    private String justificativaImpedimento;
 
     private LocalDate dataInicioAfastamento;
     private LocalDate dataFimAfastamento;
@@ -37,37 +44,48 @@ public class Militar {
     @Enumerated(EnumType.STRING)
     private MotivoInatividade motivoAfastamento;
     
+    /**
+     * Lógica central de aptidão. 
+     * O sistema verifica impedimentos automáticos e a decisão manual do ADM.
+     */
     public boolean estaAptoParaServico(LocalDate dataServico) {
-        if (!ativoNaEscala) return false;
+        // 1. Verificação básica de atividade e disponibilidade manual (ADM)
+        if (!ativoNaEscala || !disponivelManualmente) {
+            return false;
+        }
         
-        // 1. Afastamento normal (Férias, Núpcias, etc)
+        // 2. Afastamento normal (Férias, Núpcias, etc)
         if (dataInicioAfastamento != null && dataFimAfastamento != null) {
             if (!dataServico.isBefore(dataInicioAfastamento) && !dataServico.isAfter(dataFimAfastamento)) {
                 return false;
             }
         }
 
-        // REGRAS DO SERVIÇO EXTERNO
+        // 3. Regras do Serviço Externo
         if (dataInicioServicoExterno != null && dataFimServicoExterno != null) {
             
-            // 2. Durante o Serviço Externo (A partir da data de início até o fim)
+            // Durante o Serviço Externo
             if (!dataServico.isBefore(dataInicioServicoExterno) && !dataServico.isAfter(dataFimServicoExterno)) {
-                return false; // Está viajando/em missão
+                return false; 
             }
 
-            // 3. Regra das 48h de Descanso (Garante 2 dias inteiros de folga após a missão)
+            // Regra das 48h de Descanso (3 dias após para garantir 2 dias cheios)
             LocalDate dataLiberacao = dataFimServicoExterno.plusDays(3);
             if (dataServico.isAfter(dataFimServicoExterno) && dataServico.isBefore(dataLiberacao)) {
-                return false; // Está nas 48h de descanso obrigatório
+                return false; 
             }            
-            
         }
         
         return true;
     }
 
-    // Método auxiliar para o Dashboard (HTML) não quebrar ao procurar o status antigo
     public boolean isEmServicoExterno() {
         return this.dataInicioServicoExterno != null;
+    }
+
+    // Método auxiliar para limpar impedimento manual quando o militar retornar
+    public void liberarMilitar() {
+        this.disponivelManualmente = true;
+        this.justificativaImpedimento = null;
     }
 }
