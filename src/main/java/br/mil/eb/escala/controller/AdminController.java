@@ -1,6 +1,5 @@
 package br.mil.eb.escala.controller;
 
-import br.mil.eb.escala.model.Feriado;
 import br.mil.eb.escala.model.Militar;
 import br.mil.eb.escala.model.MotivoInatividade;
 import br.mil.eb.escala.model.Perfil;
@@ -22,7 +21,7 @@ public class AdminController {
 
     public record AfastamentoForm(Long militarId, MotivoInatividade motivo, LocalDate dataInicio, LocalDate dataFim) {}
     
-    // NOVO DTO para agendar a Missão
+    // DTO para agendar a Missão
     public record ServicoExternoForm(Long militarId, LocalDate dataInicio, LocalDate dataFim) {}
 
     // --- MILITAR ---
@@ -84,7 +83,6 @@ public class AdminController {
         return "redirect:/admin/afastar";
     }
 
-    // NOVO: Rota para atualizar a data do último serviço manualmente (COM A CORREÇÃO DA DATA)
     @PostMapping("/atualizar-data-servico")
     public String atualizarDataServico(
             @RequestParam("id") Long id, 
@@ -94,7 +92,7 @@ public class AdminController {
         return "redirect:/dashboard";
     }
 
-    // --- SERVIÇO EXTERNO (AGENDAMENTO NOVO) ---
+    // --- SERVIÇO EXTERNO ---
     @GetMapping("/controle")
     public String getControleEscala(Model model) {
         model.addAttribute("listaMilitaresAtivos", escalaService.getMilitaresAtivos());
@@ -115,7 +113,7 @@ public class AdminController {
         return "redirect:/admin/controle";
     }
 
-    // --- TROCA, FERIADOS E USUÁRIOS ---
+    // --- TROCA ---
     @GetMapping("/troca")
     public String getFormularioTroca(Model model) {
         model.addAttribute("listaMilitaresAtivos", escalaService.getMilitaresAtivos());
@@ -128,25 +126,9 @@ public class AdminController {
         return "redirect:/dashboard";
     }
     
-    @GetMapping("/feriados")
-    public String getFormularioFeriados(Model model) {
-        model.addAttribute("listaFeriados", escalaService.getTodosFeriados());
-        model.addAttribute("feriadoVazio", new Feriado());
-        return "admin-feriados";
-    }
-
-    @PostMapping("/salvar-feriado")
-    public String salvarFeriado(@ModelAttribute Feriado feriado) {
-        escalaService.salvarFeriado(feriado);
-        return "redirect:/admin/feriados";
-    }
-
-    @PostMapping("/deletar-feriado/{id}")
-    public String deletarFeriado(@PathVariable("id") Long id) {
-        escalaService.deletarFeriado(id);
-        return "redirect:/admin/feriados";
-    }
+    // REMOVIDO: Rotas de Feriado foram movidas para FeriadoController
     
+    // --- USUÁRIOS ---
     @GetMapping("/usuarios")
     public String getFormularioUsuarios(Model model) {
         model.addAttribute("listaUsuarios", escalaService.getTodosUsuarios());
