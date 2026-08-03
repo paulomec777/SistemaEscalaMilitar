@@ -1,6 +1,5 @@
 package br.mil.eb.escala.controller;
 
-import br.mil.eb.escala.model.Militar;
 import br.mil.eb.escala.service.EscalaService;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
@@ -20,7 +19,8 @@ public class PageController {
         return "login";
     }
     
-    @GetMapping("/dashboard")
+    // CORREÇÃO MESTRE: Agora o método responde TANTO para a raiz "/" quanto para "/dashboard"
+    @GetMapping({"/", "/dashboard"})
     public String getDashboardPage(Model model) {
         // Busca a lista completa para a tabela
         var militares = escalaService.getTodosMilitaresParaDashboard();
@@ -33,15 +33,10 @@ public class PageController {
         model.addAttribute("servicoHoje", proximo);       
         model.addAttribute("substitutoAmanha", substituto); 
         
-        // PROTEÇÃO: Garante que se não houver militar apto, o ID passado seja null de forma segura
+        // Garante segurança caso a lista venha vazia
         Long proximoId = (proximo != null) ? proximo.getId() : null;
         model.addAttribute("proximoMilitarId", proximoId);
 
-        return "dashboard";
-    }
-    
-    @GetMapping("/")
-    public String getRootPage() {
-        return "redirect:/dashboard";
+        return "dashboard"; // Renderiza a tela direto sem dar loops de redirecionamento
     }
 }
