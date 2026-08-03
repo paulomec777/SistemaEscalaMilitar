@@ -25,17 +25,15 @@ public class PageController {
         // Busca a lista completa para a tabela
         var militares = escalaService.getTodosMilitaresParaDashboard();
         
-        // CORREÇÃO AQUI: Mudamos o nome do método no Service para 'getProximoPermanencia'
+        // Busca quem tira o serviço hoje e quem é o reserva
         var proximo = escalaService.getProximoPermanencia();
-        
-        // O substituto (o segundo da fila)
         var substituto = escalaService.getProximoSubstituto();
 
         model.addAttribute("listaMilitares", militares);
-        model.addAttribute("servicoHoje", proximo);       // Quem tira o serviço
-        model.addAttribute("substitutoAmanha", substituto); // Quem é o reserva/próximo
+        model.addAttribute("servicoHoje", proximo);       
+        model.addAttribute("substitutoAmanha", substituto); 
         
-        // Passa o ID do próximo para o botão de "Trocar" no front-end saber quem tirar
+        // PROTEÇÃO: Garante que se não houver militar apto, o ID passado seja null de forma segura
         Long proximoId = (proximo != null) ? proximo.getId() : null;
         model.addAttribute("proximoMilitarId", proximoId);
 

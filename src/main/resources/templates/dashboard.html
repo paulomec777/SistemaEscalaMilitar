@@ -1,12 +1,12 @@
 <!DOCTYPE html>
-<html lang="pt-br" xmlns:th="http://www.thymeleaf.org"
-      xmlns:sec="http://www.thymeleaf.org/extras/spring-security">
+<html lang="pt-br" xmlns:th="http://thymeleaf.org"
+      xmlns:sec="http://thymeleaf.org/extras/spring-security">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Dashboard - Escala de Serviço</title>
     <link rel="stylesheet" th:href="@{/css/style.css}">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <link rel="stylesheet" href="https://cloudflare.com">
     
     <style>
         .input-folga {
@@ -67,7 +67,6 @@
         .btn-forcar:hover {
             background-color: #c0392b;
         }
-        /* Estilos de Status para refletir as novas regras */
         .badge {
             padding: 3px 8px;
             border-radius: 12px;
@@ -92,7 +91,6 @@
                 <a th:href="@{/admin/afastar}">Impedimentos</a>
                 <a th:href="@{/admin/controle}">Sv.Externo</a>
                 <a th:href="@{/admin/troca}">Troca de Serviço</a>
-                <a th:href="@{/admin/feriados}">Feriados</a>
                 <a th:href="@{/admin/usuarios}">Administradores</a>
             </span>
             
@@ -109,6 +107,11 @@
     </header>
 
     <div class="main-container">
+        
+        <!-- Mensagem de feedback das ações do Administrador -->
+        <div th:if="${mensagem}" class="card" style="padding: 1rem; background-color: #d4edda; border-left: 5px solid #28a745; margin-bottom: 1.5rem;">
+            <p th:text="${mensagem}" style="margin: 0; color: #155724; font-weight: 500;"></p>
+        </div>
         
         <div class="card" style="padding: 1rem 1.5rem; margin-bottom: 1.5rem;">
             <h2 style="font-size: 1.2rem; margin: 0;">
@@ -162,7 +165,7 @@
                 <h2>Previsão da Escala (Por Folga)</h2>
                 <div sec:authorize="hasRole('ADM')">
                     <a th:href="@{/admin/novo-militar}" class="btn-primary" style="font-size: 0.9rem;">
-                        <i class="fas fa-plus"></i> Adicionar
+                        <i class="fas fa-plus"></i> Adicionar Militar
                     </a>
                 </div>
             </div>
@@ -170,7 +173,6 @@
             <table class="escala-table">
                 <thead>
                     <tr>
-                    
                         <th style="width: 20%;">Militar</th>
                         <th style="width: 15%; text-align: center;">Folga</th>
                         <th style="width: 15%; text-align: center;">Status</th>
@@ -184,17 +186,14 @@
                         <td th:text="${militar.graduacao + ' ' + militar.nomeGuerra}" style="font-weight: 600;">Sgt Silva</td>
                         
                         <td style="text-align: center;">
-                            <!-- Se for ADM, exibe o input editável -->
                             <form sec:authorize="hasRole('ADM')" th:action="@{/admin/atualizar-folga}" method="post" style="display: flex; justify-content: center; align-items: center;">
                                 <input type="hidden" name="id" th:value="${militar.id}" />
                                 <input type="number" name="novaFolga" th:value="${militar.folga}" class="input-folga" />
                                 <button type="submit" class="btn-salvar-folga"><i class="fas fa-save"></i></button>
                             </form>
-                            <!-- Se for usuário comum, apenas lê o texto -->
                             <span sec:authorize="!hasRole('ADM')" th:text="${militar.folga}" style="font-weight: bold;">15</span>
                         </td>
                         
-                        <!-- REQUISITO DE CONGELAMENTO VISUAL: Exibe o status real baseado nas regras do service -->
                         <td style="text-align: center;">
                             <span th:if="${militar.emServicoExterno()}" class="badge badge-externo" title="Congelado: Pontuando Folga">S. Externo</span>
                             <span th:if="${!militar.ativoNaEscala && !militar.emServicoExterno()}" class="badge badge-afastado" title="Congelado: Doente/Afastado">Impedido</span>
@@ -202,3 +201,4 @@
                         </td>
                         
                         <td style="text-align: center;">
+                            <!-- Formulário do ADM para alterar data -->
