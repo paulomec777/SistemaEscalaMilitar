@@ -1,6 +1,6 @@
 <!DOCTYPE html>
-<html lang="pt-br" xmlns:th="http://www.thymeleaf.org"
-      xmlns:sec="http://www.thymeleaf.org/extras/spring-security">
+<html lang="pt-br" xmlns:th="http://thymeleaf.org"
+      xmlns:sec="http://thymeleaf.org/extras/spring-security">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -18,6 +18,7 @@
             <a th:href="@{/admin/afastar}" style="text-decoration: underline;">Impedimentos</a>
             <a th:href="@{/admin/controle}">Sv.Externo</a>
             <a th:href="@{/admin/troca}">Troca de Serviço</a>
+            <a th:href="@{/admin/feriados}">Feriados</a>
             <a th:href="@{/admin/usuarios}">Administradores</a>
             
             <form th:action="@{/logout}" method="post" style="display: inline;">
@@ -34,10 +35,10 @@
         <!-- CARD 1: Formulário de Afastamento -->
         <div class="card" style="max-width: 800px; margin: 0 auto 2rem auto;">
             <div class="card-header">
-                <h2>Novo Afastamento</h2>
+                <h2>Novo Afastamento / Impedimento</h2>
             </div>
             
-            <!-- CORREÇÃO: Vinculação explícita com o DTO/Form do controller -->
+            <!-- th:object integrado para receber a estrutura do DTO com segurança -->
             <form th:action="@{/admin/salvar-afastamento}" th:object="${afastamentoForm}" method="post">
                 
                 <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem;">
@@ -47,7 +48,7 @@
                         <label for="militarId" style="display: block; margin-bottom: 0.5rem; font-weight: 600; color: #333;">Militar (Ativo)</label>
                         <select id="militarId" name="militarId" required 
                                 style="width: 100%; padding: 0.75rem; border: 1px solid #ccc; border-radius: 8px; font-size: 1rem; background-color: #fff;">
-                            <option value="">-- Selecione --</option>
+                            <option value="">-- Selecione o Militar --</option>
                             <option th:each="militar : ${listaMilitaresAtivos}"
                                     th:value="${militar.id}"
                                     th:text="${militar.graduacao + ' ' + militar.nomeGuerra}">
@@ -56,16 +57,16 @@
                         </select>
                     </div>
                     
-                    <!-- 2. Motivo -->
+                    <!-- 2. Motivo (Enum) -->
                     <div class="form-group">
-                        <label for="motivo" style="display: block; margin-bottom: 0.5rem; font-weight: 600; color: #333;">Motivo</label>
+                        <label for="motivo" style="display: block; margin-bottom: 0.5rem; font-weight: 600; color: #333;">Motivo / Tipo</label>
                         <select id="motivo" name="motivo" required 
                                 style="width: 100%; padding: 0.75rem; border: 1px solid #ccc; border-radius: 8px; font-size: 1rem; background-color: #fff;">
-                            <option value="">-- Selecione --</option>
+                            <option value="">-- Selecione o Motivo --</option>
                             <option th:each="m : ${listaMotivos}"
                                     th:value="${m}"
-                                    th:text="${m.name()}"> <!-- Ajustado para passar o valor do Enum -->
-                                Férias
+                                    th:text="${m}">
+                                DISPENSA
                             </option>
                         </select>
                     </div>
@@ -88,7 +89,7 @@
                 
                 <div style="margin-top: 1.5rem; text-align: right;">
                     <a th:href="@{/dashboard}" style="color: #666; text-decoration: none; font-weight: 500; margin-right: 1rem;">Cancelar</a>
-                    <button type="submit" class="btn-primary" style="padding: 0.75rem 1.5rem; font-size: 1rem;">
+                    <button type="submit" class="btn-primary" style="padding: 0.75rem 1.5rem; font-size: 1rem; background-color: #556B2F; border: none; color: white; border-radius: 4px; cursor: pointer;">
                         Confirmar Afastamento
                     </button>
                 </div>
@@ -123,7 +124,7 @@
                         </td>
                         
                         <td>
-                            <span th:text="${#temporals.format(militar.dataInicioAfastamento, 'dd/MM')}">15/11</span>
+                            <span th:text="${#temporals.format(militar.dataInicioAfastamento, 'dd/MM/yyyy')}">15/11/2026</span>
                             até
                             <span th:text="${#temporals.format(militar.dataFimAfastamento, 'dd/MM/yyyy')}">30/11/2026</span>
                         </td>
@@ -151,7 +152,7 @@
     <footer style="text-align: center; padding: 20px; background-color: #f1f1f1; margin-top: 50px;">
         <p>
             Sistema de Escala Militar &copy; 2026 <br>
-            Desenvolvido com Java por <a href="https://www.linkedin.com/in/paulo-henrique-517268269" target="_blank"><strong>Cb Tomaz</strong></a>
+            Desenvolvido com Java por <a href="https://linkedin.com" target="_blank"><strong>Cb Tomaz</strong></a>
         </p>
     </footer>
 </body>

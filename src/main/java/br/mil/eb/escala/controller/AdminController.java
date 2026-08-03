@@ -20,8 +20,8 @@ public class AdminController {
     @Autowired 
     private EscalaService escalaService;
 
+    // DTOs/Records utilizados para a transferência de dados segura das telas
     public record AfastamentoForm(Long militarId, MotivoInatividade motivo, LocalDate dataInicio, LocalDate dataFim) {}
-    
     public record ServicoExternoForm(Long militarId, LocalDate dataInicio, LocalDate dataFim) {}
 
     // --- MILITAR ---
@@ -61,12 +61,14 @@ public class AdminController {
         return "redirect:/dashboard";
     }
 
-    // --- AFASTAMENTO ---
+    // --- AFASTAMENTO (CORRIGIDO) ---
     @GetMapping("/afastar")
     public String getFormularioAfastar(Model model) {
         model.addAttribute("listaMilitaresAtivos", escalaService.getMilitaresAtivos());
         model.addAttribute("listaMotivos", MotivoInatividade.values());
         model.addAttribute("listaMilitaresInativos", escalaService.getMilitaresInativos());
+        
+        // Passa o objeto instanciado para o th:object do formulário Thymeleaf não disparar erro 500
         model.addAttribute("afastamentoForm", new AfastamentoForm(null, null, LocalDate.now(), LocalDate.now())); 
         return "admin-afastar";
     }
@@ -113,20 +115,17 @@ public class AdminController {
         return "redirect:/admin/controle";
     }
 
-    // --- NOVA MECÂNICA: FORÇAR ESCALA DIRETO NA LINHA DA TABELA ---
+    // --- FORÇAR ESCALA PELO BOTÃO DA TABELA (PRESERVA FOLGA DO ANTERIOR) ---
     @PostMapping("/forcar-escala")
     public String forcarEscalaPeloBotaoDaTabela(@RequestParam("id") Long militarEntraId, RedirectAttributes attributes) {
-        // 1. Descobre quem o sistema tinha selecionado automaticamente como titular do dia (Card Verde do topo)
         Militar titularAntigo = escalaService.getProximoPermanencia();
         Militar entra = escalaService.findMilitarById(militarEntraId);
 
         if (entra != null) {
-            // 2. O militar que você clicou entra de serviço HOJE: folga zerada e data atualizada
             entra.setFolga(0);
             entra.setDataUltimoServico(LocalDate.now());
             escalaService.editarMilitar(entra);
 
-            // 3. A REGRA QUE VOCÊ PEDIU: se existia um titular antigo escalado, a folga dele NÃO é alterada!
             if (titularAntigo != null && !titularAntigo.getId().equals(entra.getId())) {
                 attributes.addFlashAttribute("mensagem", "Escala alterada! " + entra.getNomeGuerra() + 
                     " foi forçado para hoje. A folga de " + titularAntigo.getNomeGuerra() + " foi preservada intacta.");
@@ -137,7 +136,7 @@ public class AdminController {
         return "redirect:/dashboard";
     }
 
-    // --- TROCA COM REGRA DE FOLGA MANUAL ---
+    // --- TROCA MANUAL COM OPÇÃO DE ZERAMENTO ---
     @PostMapping("/salvar-troca")
     public String salvarTroca(
             @RequestParam Long militarSaiId, 
@@ -145,7 +144,6 @@ public class AdminController {
             @RequestParam(value = "zerarFolga", defaultValue = "false") boolean zerarFolga,
             RedirectAttributes attributes) {
         
-        // Se você usar a tela de troca e marcar que quer zerar a folga do que sai:
         if (zerarFolga) {
             Militar sai = escalaService.findMilitarById(militarSaiId);
             if (sai != null) {
