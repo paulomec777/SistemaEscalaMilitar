@@ -183,7 +183,7 @@
                         <th sec:authorize="hasRole('ADM')" style="width: 30%; text-align: center;">Ações Administrativas</th>
                     </tr>
                 </thead>
-              <tbody>
+             <tbody>
     <tr th:each="militar : ${listaMilitares}" 
         th:class="${militar != null and proximoMilitarId != null and militar.id == proximoMilitarId} ? 'proximo-na-escala' : ''">
         
@@ -213,6 +213,5 @@
         </td>
     </tr>
 </tbody>
-
 
 </html>
