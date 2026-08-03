@@ -192,8 +192,9 @@
         <td style="text-align: center;" th:text="${militar?.folga != null ? militar.folga : '0'}">0</td>
         
         <td style="text-align: center;">
-            <span th:if="${militar?.status == 'APTO'}" class="badge badge-apto">Apto</span>
-            <span th:if="${militar?.status == 'AFASTADO'}" class="badge badge-afastado">Afastado</span>
+    <!-- Exemplo usando a variável real 'ativoNaEscala' se for booleana -->
+    <span th:if="${militar?.ativoNaEscala}" class="badge badge-apto">Apto</span>
+    <span th:unless="${militar?.ativoNaEscala}" class="badge badge-afastado">Afastado</span>
             <span th:if="${militar?.status == 'EXTERNO'}" class="badge badge-externo">Externo</span>
             <span th:if="${militar?.status == null}">-</span>
         </td>
