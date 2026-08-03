@@ -22,7 +22,6 @@ public class AdminController {
 
     public record AfastamentoForm(Long militarId, MotivoInatividade motivo, LocalDate dataInicio, LocalDate dataFim) {}
     
-    // DTO para agendar a Missão
     public record ServicoExternoForm(Long militarId, LocalDate dataInicio, LocalDate dataFim) {}
 
     // --- MILITAR ---
@@ -128,7 +127,6 @@ public class AdminController {
             @RequestParam(value = "zerarFolga", defaultValue = "false") boolean zerarFolga,
             RedirectAttributes attributes) {
         
-        // Se o ADM marcou para zerar, ajustamos o militar que está saindo antes da troca
         if (zerarFolga) {
             Militar sai = escalaService.findMilitarById(militarSaiId);
             sai.setFolga(0);

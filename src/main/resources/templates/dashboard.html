@@ -53,7 +53,6 @@
         .btn-salvar-data:hover {
             background-color: #E67E22;
         }
-        /* Estilo para o botão de Forçar Escala */
         .btn-forcar {
             background-color: #e74c3c;
             color: white;
@@ -68,6 +67,17 @@
         .btn-forcar:hover {
             background-color: #c0392b;
         }
+        /* Estilos de Status para refletir as novas regras */
+        .badge {
+            padding: 3px 8px;
+            border-radius: 12px;
+            font-size: 0.75rem;
+            font-weight: bold;
+            text-transform: uppercase;
+        }
+        .badge-apto { background-color: #2ECC71; color: white; }
+        .badge-afastado { background-color: #E74C3C; color: white; }
+        .badge-externo { background-color: #3498DB; color: white; }
     </style>
 </head>
 <body>
@@ -115,7 +125,7 @@
         <div class="grid" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 1.5rem; margin-bottom: 2rem;">
 
             <div class="card" style="margin-bottom: 0; background-color: #fff; border-left: 5px solid #556B2F;">
-                <h3 style="margin-top: 0; color: #556B2F; font-size: 1rem; text-transform: uppercase; letter-spacing: 1px;">Serviço HOJE (Titular)</h3>
+                <h3 style="margin-top: 0; color: #556B2F; font-size: 1rem; text-transform: uppercase; letter-spacing: 1px;">Próximo Serviço (Titular)</h3>
                 <div th:if="${servicoHoje}">
                     <h2 style="margin: 0.5rem 0; font-size: 1.8rem;" th:text="${servicoHoje.graduacao + ' ' + servicoHoje.nomeGuerra}">Sgt Silva</h2>
                     <span th:text="${'(Folga ' + servicoHoje.folga + ')'}" style="color: #666; font-weight: 500;">(Folga 15)</span>
@@ -131,7 +141,7 @@
             </div>
 
             <div class="card" style="margin-bottom: 0; background-color: #fff; border-left: 5px solid #3498DB;">
-                <h3 style="margin-top: 0; color: #3498DB; font-size: 1rem; text-transform: uppercase; letter-spacing: 1px;">Substituto HOJE (Reserva)</h3>
+                <h3 style="margin-top: 0; color: #3498DB; font-size: 1rem; text-transform: uppercase; letter-spacing: 1px;">Próximo Substituto (Reserva)</h3>
                 <div th:if="${substitutoAmanha}">
                     <h2 style="margin: 0.5rem 0; font-size: 1.8rem;" th:text="${substitutoAmanha.graduacao + ' ' + substitutoAmanha.nomeGuerra}">Cb Nascimento</h2>
                     <span th:text="${'(Folga ' + substitutoAmanha.folga + ')'}" style="color: #666; font-weight: 500;">(Folga 14)</span>
@@ -150,7 +160,6 @@
         <div class="card">
             <div class="card-header">
                 <h2>Previsão da Escala (Por Folga)</h2>
-                
                 <div sec:authorize="hasRole('ADM')">
                     <a th:href="@{/admin/novo-militar}" class="btn-primary" style="font-size: 0.9rem;">
                         <i class="fas fa-plus"></i> Adicionar
@@ -169,80 +178,26 @@
                     </tr>
                 </thead>
                 <tbody>
-                    <tr th:each="militar : ${listaMilitares}" 
-                        th:class="${militar.id == proximoMilitarId} ? 'proximo-na-escala' : ''">
+                    <tr th:each="militar : ${listaMilitares}" th:class="${militar.id == proximoMilitarId} ? 'proximo-na-escala' : ''">
                         
                         <td th:text="${militar.graduacao + ' ' + militar.nomeGuerra}" style="font-weight: 600;">Sgt Silva</td>
                         
                         <td style="text-align: center;">
+                            <!-- Se for ADM, exibe o input editável -->
                             <form sec:authorize="hasRole('ADM')" th:action="@{/admin/atualizar-folga}" method="post" style="display: flex; justify-content: center; align-items: center;">
                                 <input type="hidden" name="id" th:value="${militar.id}" />
                                 <input type="number" name="novaFolga" th:value="${militar.folga}" class="input-folga" />
-                                <button type="submit" class="btn-salvar-folga" title="Salvar Nova Folga">
-                                    <i class="fas fa-check"></i>
-                                </button>
+                                <button type="submit" class="btn-salvar-folga"><i class="fas fa-save"></i></button>
                             </form>
-                            
-                            <span sec:authorize="!hasRole('ADM')" th:text="${militar.folga}" style="font-weight: bold; color: #555;">15</span>
+                            <!-- Se for usuário comum, apenas lê o texto -->
+                            <span sec:authorize="!hasRole('ADM')" th:text="${militar.folga}" style="font-weight: bold;">15</span>
+                        </td>
+                        
+                        <!-- REQUISITO DE CONGELAMENTO VISUAL: Exibe o status real baseado nas regras do service -->
+                        <td style="text-align: center;">
+                            <span th:if="${militar.emServicoExterno()}" class="badge badge-externo" title="Congelado: Pontuando Folga">S. Externo</span>
+                            <span th:if="${!militar.ativoNaEscala && !militar.emServicoExterno()}" class="badge badge-afastado" title="Congelado: Doente/Afastado">Impedido</span>
+                            <span th:if="${militar.ativoNaEscala && !militar.emServicoExterno()}" class="badge badge-apto">Apto</span>
                         </td>
                         
                         <td style="text-align: center;">
-                            <span th:if="${militar.ativoNaEscala and !militar.emServicoExterno}" class="badge badge-success">Ativo</span>
-                            <span th:unless="${militar.ativoNaEscala}" th:text="${militar.motivoAfastamento != null ? militar.motivoAfastamento.descricao : 'Inativo'}" class="badge badge-warning">Afastado</span>
-                            <span th:if="${militar.ativoNaEscala and militar.emServicoExterno}" class="badge badge-info">Externo</span>
-                        </td>
-                        
-                        <td style="text-align: center; color: #666;">
-                            
-                            <form sec:authorize="hasRole('ADM')" th:action="@{/admin/atualizar-data-servico}" method="post" style="display: flex; justify-content: center; align-items: center;">
-                                <input type="hidden" name="id" th:value="${militar.id}" />
-                                <input type="date" name="novaData" th:value="${militar.dataUltimoServico != null ? #temporals.format(militar.dataUltimoServico, 'yyyy-MM-dd') : ''}" class="input-data" required />
-                                <button type="submit" class="btn-salvar-data" title="Salvar Nova Data">
-                                    <i class="fas fa-save"></i>
-                                </button>
-                            </form>
-
-                            <span sec:authorize="!hasRole('ADM')" th:text="${militar.dataUltimoServico != null} ? ${#temporals.format(militar.dataUltimoServico, 'dd/MM/yyyy')} : '-'">
-                            </span>
-                        </td>
-                        
-                        <td sec:authorize="hasRole('ADM')" style="text-align: center;">
-                            <a th:href="@{/admin/troca(idEntra=${militar.id})}" 
-                               class="btn-forcar" 
-                               title="Forçar este militar para o serviço de hoje"
-                               style="margin-bottom: 5px; width: 90%;">
-                               <i class="fas fa-hand-pointer"></i> Forçar p/ Hoje
-                            </a>
-                            <br>
-                            <a th:href="@{/admin/editar/{id}(id=${militar.id})}" 
-                               class="btn-acao" 
-                               style="background-color: #3498DB; text-decoration: none; padding: 0.3rem 0.6rem; display: inline-block; margin-right: 5px;"
-                               title="Editar Nome/Graduação">
-                               <i class="fas fa-edit"></i>
-                            </a>
-                            
-                            <a th:href="@{/admin/afastar(id=${militar.id})}" 
-                               class="btn-acao" 
-                               style="background-color: #F39C12; text-decoration: none; padding: 0.3rem 0.6rem; display: inline-block;"
-                               title="Lançar Impedimento">
-                               <i class="fas fa-user-slash"></i>
-                            </a>
-                        </td>
-                    </tr>
-                    <tr th:if="${#lists.isEmpty(listaMilitares)}">
-                        <td colspan="5" style="text-align: center; padding: 2rem; color: #999;">Nenhum militar cadastrado.</td>
-                    </tr>
-                </tbody>
-            </table>
-        </div>
-    </div>
-    
-    <footer style="text-align: center; padding: 20px; background-color: #f1f1f1; margin-top: 50px;">
-        <p>
-            Sistema de Escala Militar &copy; 2026 <br>
-            Desenvolvido com Java por <a href="https://www.linkedin.com/in/paulo-henrique-517268269" target="_blank"><strong>Cb Tomaz</strong></a>
-        </p>
-    </footer>
-    
-</body>
-</html>
