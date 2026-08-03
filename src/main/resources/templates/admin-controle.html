@@ -17,6 +17,17 @@
         .form-group input, .form-group select { 
             width: 100%; padding: 0.6rem; border: 1px solid #ccc; border-radius: 4px; font-size: 1rem;
         }
+        /* Estilos para os distintivos de status da missão */
+        .badge {
+            padding: 3px 8px;
+            border-radius: 12px;
+            font-size: 0.75rem;
+            font-weight: bold;
+            text-transform: uppercase;
+        }
+        .badge-futura { background-color: #F1C40F; color: #fff; }
+        .badge-andamento { background-color: #E67E22; color: #fff; }
+        .badge-descanso { background-color: #3498DB; color: #fff; }
     </style>
 </head>
 <body>
@@ -30,6 +41,7 @@
                 <a th:href="@{/admin/afastar}">Impedimentos</a>
                 <a th:href="@{/admin/controle}" style="text-decoration: underline;">Sv.Externo</a>
                 <a th:href="@{/admin/troca}">Troca de Serviço</a>
+                <a th:href="@{/admin/feriados}">Feriados</a>
                 <a th:href="@{/admin/usuarios}">Administradores</a>
             </span>
             <form th:action="@{/logout}" method="post" style="display: inline;">
@@ -98,8 +110,16 @@
                         <td style="text-align: center;" th:text="${#temporals.format(militar.dataInicioServicoExterno, 'dd/MM/yyyy')}"></td>
                         <td style="text-align: center; font-weight: bold;" th:text="${#temporals.format(militar.dataFimServicoExterno, 'dd/MM/yyyy')}"></td>
                         
+                        <!-- REVISÃO INTELIGENTE: Status dinâmico baseado na data atual do sistema (2026) -->
                         <td style="text-align: center;">
-                            <span class="badge badge-info">Agendado</span>
+                            <!-- Missão agendada para o futuro -->
+                            <span th:if="${#temporals.createNow().toLocalDate().isBefore(militar.dataInicioServicoExterno)}" class="badge badge-futura">Agendada</span>
+                            
+                            <!-- Missão acontecendo exatamente no dia de hoje -->
+                            <span th:if="${!#temporals.createNow().toLocalDate().isBefore(militar.dataInicioServicoExterno) && !#temporals.createNow().toLocalDate().isAfter(militar.dataFimServicoExterno)}" class="badge badge-andamento">Em Andamento</span>
+                            
+                            <!-- Retornou da missão e está cumprindo as 48h de descanso regulamentares -->
+                            <span th:if="${#temporals.createNow().toLocalDate().isAfter(militar.dataFimServicoExterno)}" class="badge badge-descanso" title="Período de Descanso Ativo">Pós-Missão</span>
                         </td>
                         
                         <td style="text-align: center;">

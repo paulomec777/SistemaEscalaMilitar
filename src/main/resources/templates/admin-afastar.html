@@ -37,7 +37,8 @@
                 <h2>Novo Afastamento</h2>
             </div>
             
-            <form th:action="@{/admin/salvar-afastamento}" method="post">
+            <!-- CORREÇÃO: Vinculação explícita com o DTO/Form do controller -->
+            <form th:action="@{/admin/salvar-afastamento}" th:object="${afastamentoForm}" method="post">
                 
                 <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem;">
                     
@@ -63,7 +64,7 @@
                             <option value="">-- Selecione --</option>
                             <option th:each="m : ${listaMotivos}"
                                     th:value="${m}"
-                                    th:text="${m.getDescricao()}">
+                                    th:text="${m.name()}"> <!-- Ajustado para passar o valor do Enum -->
                                 Férias
                             </option>
                         </select>
@@ -72,14 +73,14 @@
                     <!-- 3. Data Início -->
                     <div class="form-group">
                         <label for="dataInicio" style="display: block; margin-bottom: 0.5rem; font-weight: 600; color: #333;">Data de Início</label>
-                        <input type="date" id="dataInicio" name="dataInicio" required 
+                        <input type="date" id="dataInicio" name="dataInicio" th:value="*{dataInicio}" required 
                                style="width: 100%; padding: 0.75rem; border: 1px solid #ccc; border-radius: 8px; font-size: 1rem;">
                     </div>
                     
                     <!-- 4. Data Fim -->
                     <div class="form-group">
                         <label for="dataFim" style="display: block; margin-bottom: 0.5rem; font-weight: 600; color: #333;">Data de Término</label>
-                        <input type="date" id="dataFim" name="dataFim" required 
+                        <input type="date" id="dataFim" name="dataFim" th:value="*{dataFim}" required 
                                style="width: 100%; padding: 0.75rem; border: 1px solid #ccc; border-radius: 8px; font-size: 1rem;">
                     </div>
                 
@@ -115,7 +116,7 @@
                         <td th:text="${militar.graduacao + ' ' + militar.nomeGuerra}" style="font-weight: 500;">Cb Tomaz</td>
                         
                         <td>
-                            <span th:text="${militar.motivoAfastamento.getDescricao()}" 
+                            <span th:text="${militar.motivoAfastamento}" 
                                   style="background-color: #FFF3CD; color: #856404; padding: 0.25rem 0.5rem; border-radius: 4px; font-size: 0.9rem; font-weight: 600;">
                                 Atestado
                             </span>
@@ -124,7 +125,7 @@
                         <td>
                             <span th:text="${#temporals.format(militar.dataInicioAfastamento, 'dd/MM')}">15/11</span>
                             até
-                            <span th:text="${#temporals.format(militar.dataFimAfastamento, 'dd/MM/yyyy')}">30/11/2025</span>
+                            <span th:text="${#temporals.format(militar.dataFimAfastamento, 'dd/MM/yyyy')}">30/11/2026</span>
                         </td>
                         
                         <td style="text-align: center;">
@@ -132,7 +133,7 @@
                                class="btn-primary"
                                style="background-color: #28a745; border: none; padding: 0.4rem 0.8rem; font-size: 0.9rem; text-decoration: none;"
                                onclick="return confirm('Deseja REATIVAR este militar antes do prazo?');">
-                                &#8634; Reativar
+                                ↺ Reativar
                             </a>
                         </td>
                     </tr>
@@ -147,7 +148,7 @@
         </div>
         
     </div>
- <footer style="text-align: center; padding: 20px; background-color: #f1f1f1; margin-top: 50px;">
+    <footer style="text-align: center; padding: 20px; background-color: #f1f1f1; margin-top: 50px;">
         <p>
             Sistema de Escala Militar &copy; 2026 <br>
             Desenvolvido com Java por <a href="https://www.linkedin.com/in/paulo-henrique-517268269" target="_blank"><strong>Cb Tomaz</strong></a>

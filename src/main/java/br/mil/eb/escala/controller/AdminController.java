@@ -113,13 +113,31 @@ public class AdminController {
         return "redirect:/admin/controle";
     }
 
-    // --- TROCA COM REGRA DE FOLGA ---
-    @GetMapping("/troca")
-    public String getFormularioTroca(Model model) {
-        model.addAttribute("listaMilitaresAtivos", escalaService.getMilitaresAtivos());
-        return "admin-troca";
+    // --- NOVA MECÂNICA: FORÇAR ESCALA DIRETO NA LINHA DA TABELA ---
+    @PostMapping("/forcar-escala")
+    public String forcarEscalaPeloBotaoDaTabela(@RequestParam("id") Long militarEntraId, RedirectAttributes attributes) {
+        // 1. Descobre quem o sistema tinha selecionado automaticamente como titular do dia (Card Verde do topo)
+        Militar titularAntigo = escalaService.getProximoPermanencia();
+        Militar entra = escalaService.findMilitarById(militarEntraId);
+
+        if (entra != null) {
+            // 2. O militar que você clicou entra de serviço HOJE: folga zerada e data atualizada
+            entra.setFolga(0);
+            entra.setDataUltimoServico(LocalDate.now());
+            escalaService.editarMilitar(entra);
+
+            // 3. A REGRA QUE VOCÊ PEDIU: se existia um titular antigo escalado, a folga dele NÃO é alterada!
+            if (titularAntigo != null && !titularAntigo.getId().equals(entra.getId())) {
+                attributes.addFlashAttribute("mensagem", "Escala alterada! " + entra.getNomeGuerra() + 
+                    " foi forçado para hoje. A folga de " + titularAntigo.getNomeGuerra() + " foi preservada intacta.");
+            } else {
+                attributes.addFlashAttribute("mensagem", entra.getNomeGuerra() + " foi forçado para o serviço de hoje.");
+            }
+        }
+        return "redirect:/dashboard";
     }
 
+    // --- TROCA COM REGRA DE FOLGA MANUAL ---
     @PostMapping("/salvar-troca")
     public String salvarTroca(
             @RequestParam Long militarSaiId, 
@@ -127,12 +145,15 @@ public class AdminController {
             @RequestParam(value = "zerarFolga", defaultValue = "false") boolean zerarFolga,
             RedirectAttributes attributes) {
         
+        // Se você usar a tela de troca e marcar que quer zerar a folga do que sai:
         if (zerarFolga) {
             Militar sai = escalaService.findMilitarById(militarSaiId);
-            sai.setFolga(0);
-            sai.setDataUltimoServico(LocalDate.now());
-            escalaService.editarMilitar(sai);
-            attributes.addFlashAttribute("mensagem", "Troca realizada: folga de " + sai.getNomeGuerra() + " foi ZERADA.");
+            if (sai != null) {
+                sai.setFolga(0);
+                sai.setDataUltimoServico(LocalDate.now());
+                escalaService.editarMilitar(sai);
+                attributes.addFlashAttribute("mensagem", "Troca realizada: folga de " + sai.getNomeGuerra() + " foi ZERADA.");
+            }
         } else {
             attributes.addFlashAttribute("mensagem", "Troca realizada: folgas preservadas.");
         }
