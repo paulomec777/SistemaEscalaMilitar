@@ -114,7 +114,7 @@
         <div class="card" style="padding: 1rem 1.5rem; margin-bottom: 1.5rem;">
             <h2 style="font-size: 1.2rem; margin: 0;">
                 <span sec:authorize="isAuthenticated()">
-                    Bem-vindo, <span sec:authentication="name" style="color: var(--verde-oliva-principal, #556B2F);">Usuário</span>!
+                    Bem-vindo, <span th:text="${#authentication != null ? #authentication.name : 'Usuário'}" style="color: var(--verde-oliva-principal, #556B2F);">Usuário</span>!
                 </span>
                 <span sec:authorize="!isAuthenticated()">
                     Bem-vindo!
@@ -183,38 +183,43 @@
                         <th sec:authorize="hasRole('ADM')" style="width: 30%; text-align: center;">Ações Administrativas</th>
                     </tr>
                 </thead>
-             <tbody>
-    <tr th:each="militar : ${listaMilitares}" 
-        th:class="${militar != null and proximoMilitarId != null and militar.id == proximoMilitarId} ? 'proximo-na-escala' : ''">
-        
-        <td th:text="${(militar?.graduacao != null ? militar.graduacao : '') + ' ' + (militar?.nomeGuerra != null ? militar.nomeGuerra : '')}">Militar</td>
-        
-        <td style="text-align: center;" th:text="${militar?.folga != null ? militar.folga : '0'}">0</td>
-        
-        <td style="text-align: center;">
-            <span th:if="${militar?.status == 'APTO'}" class="badge badge-apto">Apto</span>
-            <span th:if="${militar?.status == 'AFASTADO'}" class="badge badge-afastado">Afastado</span>
-            <span th:if="${militar?.status == 'EXTERNO'}" class="badge badge-externo">Externo</span>
-            <span th:if="${militar?.status == null}">-</span>
-        </td>
-        
-        <!-- TRATAMENTO SEGURO DA DATA -->
-        <td style="text-align: center;">
-            <span th:if="${militar?.ultimoServico != null}" 
-                  th:text="${#temporals.format(militar.ultimoServico, 'dd/MM/yyyy')}">01/01/2026</span>
-            <span th:if="${militar?.ultimoServico == null}">--/--/----</span>
-        </td>
-        
-        <td sec:authorize="hasRole('ADM')" style="text-align: center;">
-            <a th:if="${militar?.id != null}" 
-               th:href="@{/admin/editar/{id}(id=${militar.id})}" 
-               class="btn-salvar-data" 
-               style="text-decoration: none;">Editar</a>
-        </td>
-    </tr>
-</tbody>
-  </table>
+                <tbody>
+                    <tr th:each="militar : ${listaMilitares}" 
+                        th:class="${militar != null and proximoMilitarId != null and militar.id == proximoMilitarId} ? 'proximo-na-escala' : ''">
+                        
+                        <td th:text="${(militar?.graduacao != null ? militar.graduacao : '') + ' ' + (militar?.nomeGuerra != null ? militar.nomeGuerra : '')}">Militar</td>
+                        
+                        <td style="text-align: center;" th:text="${militar?.folga != null ? militar.folga : '0'}">0</td>
+                        
+                        <td style="text-align: center;">
+                            <span th:if="${militar?.status == 'APTO'}" class="badge badge-apto">Apto</span>
+                            <span th:if="${militar?.status == 'AFASTADO'}" class="badge badge-afastado">Afastado</span>
+                            <span th:if="${militar?.status == 'EXTERNO'}" class="badge badge-externo">Externo</span>
+                            <span th:if="${militar?.status == null}">-</span>
+                        </td>
+                        
+                        <!-- FORMATAÇÃO SEGURA DE DATA -->
+                        <td style="text-align: center;">
+                            <!-- Funciona se for LocalDate / LocalDateTime -->
+                            <span th:if="${militar?.ultimoServico != null and #strings.contains(militar.ultimoServico.class.name, 'time')}" 
+                                  th:text="${#temporals.format(militar.ultimoServico, 'dd/MM/yyyy')}"></span>
+                                  
+                            <!-- Funciona se for java.util.Date clássico -->
+                            <span th:if="${militar?.ultimoServico != null and !#strings.contains(militar.ultimoServico.class.name, 'time')}" 
+                                  th:text="${#dates.format(militar.ultimoServico, 'dd/MM/yyyy')}"></span>
+                                  
+                            <span th:if="${militar?.ultimoServico == null}">--/--/----</span>
+                        </td>
+                        
+                        <td sec:authorize="hasRole('ADM')" style="text-align: center;">
+                            <a th:if="${militar?.id != null}" 
+                               th:href="@{/admin/editar/{id}(id=${militar.id})}" 
+                               class="btn-salvar-data" 
+                               style="text-decoration: none;">Editar</a>
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
         </div>
     </div>
 </body>
-</html>
