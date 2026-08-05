@@ -38,14 +38,14 @@
                 <h2>Novo Afastamento / Impedimento</h2>
             </div>
             
-            <form th:action="@{/admin/salvar-afastamento}" th:object="${afastamentoForm}" method="post">
+           <form th:action="@{/admin/salvar-afastamento}" method="post">
                 
                 <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem;">
                     
                     <!-- 1. Militar -->
                     <div class="form-group">
                         <label for="militarId" style="display: block; margin-bottom: 0.5rem; font-weight: 600; color: #333;">Militar (Ativo)</label>
-                        <select th:field="*{militarId}" required 
+                        <select name="militarId" id="militarId" required 
                                 style="width: 100%; padding: 0.75rem; border: 1px solid #ccc; border-radius: 8px; font-size: 1rem; background-color: #fff;">
                             <option value="">-- Selecione o Militar --</option>
                             <option th:each="militar : ${listaMilitaresAtivos}"
@@ -55,10 +55,10 @@
                         </select>
                     </div>
                     
-                    <!-- 2. Motivo (Input de Texto Livre corrigido para motivoAfastamento) -->
+                    <!-- 2. Motivo (Texto Livre) -->
                     <div class="form-group">
                         <label for="motivoAfastamento" style="display: block; margin-bottom: 0.5rem; font-weight: 600; color: #333;">Motivo / Descrição</label>
-                        <input type="text" id="motivoAfastamento" th:field="*{motivoAfastamento}" required 
+                        <input type="text" name="motivoAfastamento" id="motivoAfastamento" required 
                                placeholder="Ex: Atestado Médico, Licença, etc."
                                style="width: 100%; padding: 0.75rem; border: 1px solid #ccc; border-radius: 8px; font-size: 1rem; background-color: #fff;">
                     </div>
@@ -66,14 +66,14 @@
                     <!-- 3. Data Início -->
                     <div class="form-group">
                         <label for="dataInicio" style="display: block; margin-bottom: 0.5rem; font-weight: 600; color: #333;">Data de Início</label>
-                        <input type="date" th:field="*{dataInicio}" required 
+                        <input type="date" name="dataInicio" id="dataInicio" required 
                                style="width: 100%; padding: 0.75rem; border: 1px solid #ccc; border-radius: 8px; font-size: 1rem;">
                     </div>
                     
                     <!-- 4. Data Fim -->
                     <div class="form-group">
                         <label for="dataFim" style="display: block; margin-bottom: 0.5rem; font-weight: 600; color: #333;">Data de Término</label>
-                        <input type="date" th:field="*{dataFim}" required 
+                        <input type="date" name="dataFim" id="dataFim" required 
                                style="width: 100%; padding: 0.75rem; border: 1px solid #ccc; border-radius: 8px; font-size: 1rem;">
                     </div>
                 
