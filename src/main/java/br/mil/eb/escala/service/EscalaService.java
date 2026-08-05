@@ -2,7 +2,6 @@ package br.mil.eb.escala.service;
 
 import br.mil.eb.escala.model.Feriado;
 import br.mil.eb.escala.model.Militar;
-import br.mil.eb.escala.model.MotivoInatividade;
 import br.mil.eb.escala.model.Usuario;
 import br.mil.eb.escala.repository.FeriadoRepository;
 import br.mil.eb.escala.repository.MilitarRepository;
