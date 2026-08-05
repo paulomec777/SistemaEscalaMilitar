@@ -42,8 +42,8 @@ public class Militar {
     private LocalDate dataInicioAfastamento;
     private LocalDate dataFimAfastamento;
     
-    @Enumerated(EnumType.STRING)
-    private MotivoInatividade motivoAfastamento;
+    // Mudado de Enum para String para aceitar texto livre digitado pelo ADM
+    private String motivoAfastamento;
     
     /**
      * Lógica central de aptidão. 
@@ -90,10 +90,6 @@ public class Militar {
         this.justificativaImpedimento = null;
     }
 
-    /**
-     * NOVO: Método virtual para mastigar a regra de exibição para o Front-end (Thymeleaf).
-     * Como o método chama "getStatus", o HTML pode acessar via "militar.status".
-     */
     public String getStatus() {
         if (!ativoNaEscala || !disponivelManualmente) {
             return "AFASTADO";

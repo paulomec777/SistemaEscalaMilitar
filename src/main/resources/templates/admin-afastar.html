@@ -1,6 +1,6 @@
 <!DOCTYPE html>
-<html lang="pt-br" xmlns:th="http://thymeleaf.org"
-      xmlns:sec="http://thymeleaf.org/extras/spring-security">
+<html lang="pt-br" xmlns:th="http://www.thymeleaf.org"
+      xmlns:sec="http://www.thymeleaf.org/extras/spring-security">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -38,7 +38,6 @@
                 <h2>Novo Afastamento / Impedimento</h2>
             </div>
             
-            <!-- th:object integrado para receber a estrutura do DTO com segurança -->
             <form th:action="@{/admin/salvar-afastamento}" th:object="${afastamentoForm}" method="post">
                 
                 <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem;">
@@ -52,23 +51,16 @@
                             <option th:each="militar : ${listaMilitaresAtivos}"
                                     th:value="${militar.id}"
                                     th:text="${militar.graduacao + ' ' + militar.nomeGuerra}">
-                                Sgt Silva
                             </option>
                         </select>
                     </div>
                     
-                    <!-- 2. Motivo (Enum) -->
+                    <!-- 2. Motivo (Agora Input de Texto Livre) -->
                     <div class="form-group">
-                        <label for="motivo" style="display: block; margin-bottom: 0.5rem; font-weight: 600; color: #333;">Motivo / Tipo</label>
-                        <select th:field="*{motivo}" required 
-                                style="width: 100%; padding: 0.75rem; border: 1px solid #ccc; border-radius: 8px; font-size: 1rem; background-color: #fff;">
-                            <option value="">-- Selecione o Motivo --</option>
-                            <option th:each="m : ${listaMotivos}"
-                                    th:value="${m}"
-                                    th:text="${m}">
-                                DISPENSA
-                            </option>
-                        </select>
+                        <label for="motivo" style="display: block; margin-bottom: 0.5rem; font-weight: 600; color: #333;">Motivo / Descrição</label>
+                        <input type="text" th:field="*{motivo}" required 
+                               placeholder="Ex: Atestado Médico, Licença, etc."
+                               style="width: 100%; padding: 0.75rem; border: 1px solid #ccc; border-radius: 8px; font-size: 1rem; background-color: #fff;">
                     </div>
 
                     <!-- 3. Data Início -->
@@ -114,19 +106,19 @@
                 <tbody>
                     <tr th:each="militar : ${listaMilitaresInativos}">
                         
-                        <td th:text="${militar.graduacao + ' ' + militar.nomeGuerra}" style="font-weight: 500;">Cb Tomaz</td>
+                        <td th:text="${militar.graduacao + ' ' + militar.nomeGuerra}" style="font-weight: 500;"></td>
                         
                         <td>
+                            <!-- Exibe dinamicamente o texto livre digitado pelo ADM -->
                             <span th:text="${militar.motivoAfastamento}" 
                                   style="background-color: #FFF3CD; color: #856404; padding: 0.25rem 0.5rem; border-radius: 4px; font-size: 0.9rem; font-weight: 600;">
-                                Atestado
                             </span>
                         </td>
                         
                         <td>
-                            <span th:text="${#temporals.format(militar.dataInicioAfastamento, 'dd/MM/yyyy')}">15/11/2026</span>
+                            <span th:text="${#temporals.format(militar.dataInicioAfastamento, 'dd/MM/yyyy')}"></span>
                             até
-                            <span th:text="${#temporals.format(militar.dataFimAfastamento, 'dd/MM/yyyy')}">30/11/2026</span>
+                            <span th:text="${#temporals.format(militar.dataFimAfastamento, 'dd/MM/yyyy')}"></span>
                         </td>
                         
                         <td style="text-align: center;">
@@ -152,9 +144,8 @@
     <footer style="text-align: center; padding: 20px; background-color: #f1f1f1; margin-top: 50px;">
         <p>
             Sistema de Escala Militar &copy; 2026 <br>
-            Desenvolvido com Java por <a href="https://linkedin.com" target="_blank"><strong>Cb Tomaz</strong></a>
+            Desenvolvido com Java por <a href="https://www.linkedin.com/in/paulo-henrique-517268269" target="_blank"><strong>Cb Tomaz</strong></a>
         </p>
     </footer>
 </body>
 </html>
-

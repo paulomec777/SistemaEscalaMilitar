@@ -152,7 +152,7 @@ public class EscalaService {
         if (militarRepository.existsById(id)) militarRepository.deleteById(id);
     }
 
-    public void afastarMilitar(Long id, MotivoInatividade motivo, LocalDate inicio, LocalDate fim) {
+    public void afastarMilitar(Long id, String motivo, LocalDate inicio, LocalDate fim) {
         Militar militar = findMilitarById(id);
         if (militar != null) {
             militar.setAtivoNaEscala(false); 

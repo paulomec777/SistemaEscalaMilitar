@@ -1,7 +1,6 @@
 package br.mil.eb.escala.controller;
 
 import br.mil.eb.escala.model.Militar;
-import br.mil.eb.escala.model.MotivoInatividade;
 import br.mil.eb.escala.model.Perfil;
 import br.mil.eb.escala.model.Usuario;
 import br.mil.eb.escala.service.EscalaService;
@@ -23,13 +22,13 @@ public class AdminController {
     @Autowired 
     private EscalaService escalaService;
 
-    // --- DTOs Clássicos (Proteção contra Erro 500 no Thymeleaf Model Binding) ---
+    // --- DTO com motivo do tipo String (Texto Livre) ---
     @Data
     @NoArgsConstructor
     @AllArgsConstructor
     public static class AfastamentoForm {
         private Long militarId;
-        private MotivoInatividade motivo;
+        private String motivo; // Agora é String para aceitar texto livre
         @DateTimeFormat(iso = DateTimeFormat.ISO.DATE)
         private LocalDate dataInicio;
         @DateTimeFormat(iso = DateTimeFormat.ISO.DATE)
@@ -88,10 +87,10 @@ public class AdminController {
     @GetMapping("/afastar")
     public String getFormularioAfastar(Model model) {
         model.addAttribute("listaMilitaresAtivos", escalaService.getMilitaresAtivos());
-        model.addAttribute("listaMotivos", MotivoInatividade.values());
         model.addAttribute("listaMilitaresInativos", escalaService.getMilitaresInativos());
         
-        model.addAttribute("afastamentoForm", new AfastamentoForm(null, null, LocalDate.now(), LocalDate.now())); 
+        // Inicializa o form com uma String vazia para o motivo
+        model.addAttribute("afastamentoForm", new AfastamentoForm(null, "", LocalDate.now(), LocalDate.now())); 
         return "admin-afastar";
     }
     
@@ -137,14 +136,13 @@ public class AdminController {
         return "redirect:/admin/controle";
     }
 
-    // --- ROTA DE TROCA DE SERVIÇO (ADICIONADA PARA ELIMINAR O ERRO 404) ---
+    // --- TROCA DE SERVIÇO ---
     @GetMapping("/troca")
     public String getFormularioTroca(Model model) {
         model.addAttribute("listaMilitaresAtivos", escalaService.getMilitaresAtivos());
         return "admin-troca";
     }
 
-    // --- FORÇAR ESCALA PELO BOTÃO DA TABELA ---
     @PostMapping("/forcar-escala")
     public String forcarEscalaPeloBotaoDaTabela(@RequestParam("id") Long militarEntraId, RedirectAttributes attributes) {
         Militar titularAntigo = escalaService.getProximoPermanencia();
@@ -164,7 +162,6 @@ public class AdminController {
         return "redirect:/dashboard";
     }
 
-    // --- TROCA MANUAL COM OPÇÃO DE ZERAMENTO ---
     @PostMapping("/salvar-troca")
     public String salvarTroca(
             @RequestParam Long militarSaiId, 
