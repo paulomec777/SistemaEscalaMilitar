@@ -1,3 +1,6 @@
+Aqui está o código completo do **`admin-afastar.html`** com as correções do `th:field` aplicadas diretamente no formulário. Pode copiar e substituir todo o conteúdo do seu arquivo:
+
+```html
 <!DOCTYPE html>
 <html lang="pt-br" xmlns:th="http://thymeleaf.org"
       xmlns:sec="http://thymeleaf.org/extras/spring-security">
@@ -46,7 +49,7 @@
                     <!-- 1. Militar -->
                     <div class="form-group">
                         <label for="militarId" style="display: block; margin-bottom: 0.5rem; font-weight: 600; color: #333;">Militar (Ativo)</label>
-                        <select id="militarId" name="militarId" required 
+                        <select th:field="*{militarId}" required 
                                 style="width: 100%; padding: 0.75rem; border: 1px solid #ccc; border-radius: 8px; font-size: 1rem; background-color: #fff;">
                             <option value="">-- Selecione o Militar --</option>
                             <option th:each="militar : ${listaMilitaresAtivos}"
@@ -60,7 +63,7 @@
                     <!-- 2. Motivo (Enum) -->
                     <div class="form-group">
                         <label for="motivo" style="display: block; margin-bottom: 0.5rem; font-weight: 600; color: #333;">Motivo / Tipo</label>
-                        <select id="motivo" name="motivo" required 
+                        <select th:field="*{motivo}" required 
                                 style="width: 100%; padding: 0.75rem; border: 1px solid #ccc; border-radius: 8px; font-size: 1rem; background-color: #fff;">
                             <option value="">-- Selecione o Motivo --</option>
                             <option th:each="m : ${listaMotivos}"
@@ -74,14 +77,14 @@
                     <!-- 3. Data Início -->
                     <div class="form-group">
                         <label for="dataInicio" style="display: block; margin-bottom: 0.5rem; font-weight: 600; color: #333;">Data de Início</label>
-                        <input type="date" id="dataInicio" name="dataInicio" th:value="*{dataInicio}" required 
+                        <input type="date" th:field="*{dataInicio}" required 
                                style="width: 100%; padding: 0.75rem; border: 1px solid #ccc; border-radius: 8px; font-size: 1rem;">
                     </div>
                     
                     <!-- 4. Data Fim -->
                     <div class="form-group">
                         <label for="dataFim" style="display: block; margin-bottom: 0.5rem; font-weight: 600; color: #333;">Data de Término</label>
-                        <input type="date" id="dataFim" name="dataFim" th:value="*{dataFim}" required 
+                        <input type="date" th:field="*{dataFim}" required 
                                style="width: 100%; padding: 0.75rem; border: 1px solid #ccc; border-radius: 8px; font-size: 1rem;">
                     </div>
                 
@@ -157,3 +160,5 @@
     </footer>
 </body>
 </html>
+
+```

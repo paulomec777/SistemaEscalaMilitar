@@ -75,6 +75,8 @@
         }
         .badge-apto { background-color: #2ECC71; color: white; }
         .badge-afastado { background-color: #E74C3C; color: white; }
+        /* Nova classe para Serviço Externo adicionada */
+        .badge-externo { background-color: #F39C12; color: white; } 
     </style>
 </head>
 <body>
@@ -190,14 +192,16 @@
                         
                         <td style="text-align: center;" th:text="${militar?.folga != null ? militar.folga : '0'}">0</td>
                         
-                        <!-- Coluna de Status corrigida para ler ativoNaEscala -->
+                        <!-- Coluna de Status ATUALIZADA para usar a inteligência do back-end -->
                         <td style="text-align: center;">
-                            <span th:if="${militar?.ativoNaEscala}" class="badge badge-apto">Apto</span>
-                            <span th:if="${militar != null and !militar.ativoNaEscala}" class="badge badge-afastado">Afastado</span>
+                            <span th:if="${militar != null}"
+                                  th:text="${militar.status}"
+                                  th:classappend="${militar.status == 'APTO' ? 'badge-apto' : (militar.status == 'AFASTADO' ? 'badge-afastado' : 'badge-externo')}"
+                                  class="badge">
+                            </span>
                             <span th:if="${militar == null}">-</span>
                         </td>
                         
-                        <!-- Coluna de Data corrigida para ler dataUltimoServico -->
                         <td style="text-align: center;">
                             <span th:if="${militar?.dataUltimoServico != null}" 
                                   th:text="${#temporals.format(militar.dataUltimoServico, 'dd/MM/yyyy')}"></span>
@@ -209,7 +213,6 @@
                                th:href="@{/admin/editar/{id}(id=${militar.id})}" 
                                class="btn-salvar-data" 
                                style="text-decoration: none;">Editar</a>
-                               
                         </td>
                     </tr>
                 </tbody>
