@@ -5,6 +5,9 @@ import br.mil.eb.escala.model.MotivoInatividade;
 import br.mil.eb.escala.model.Perfil;
 import br.mil.eb.escala.model.Usuario;
 import br.mil.eb.escala.service.EscalaService;
+import lombok.Data;
+import lombok.NoArgsConstructor;
+import lombok.AllArgsConstructor;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
@@ -20,9 +23,29 @@ public class AdminController {
     @Autowired 
     private EscalaService escalaService;
 
-    // DTOs/Records utilizados para a transferência de dados segura das telas
-    public record AfastamentoForm(Long militarId, MotivoInatividade motivo, LocalDate dataInicio, LocalDate dataFim) {}
-    public record ServicoExternoForm(Long militarId, LocalDate dataInicio, LocalDate dataFim) {}
+    // --- DTOs Clássicos (Proteção contra Erro 500 no Thymeleaf Model Binding) ---
+    @Data
+    @NoArgsConstructor
+    @AllArgsConstructor
+    public static class AfastamentoForm {
+        private Long militarId;
+        private MotivoInatividade motivo;
+        @DateTimeFormat(iso = DateTimeFormat.ISO.DATE)
+        private LocalDate dataInicio;
+        @DateTimeFormat(iso = DateTimeFormat.ISO.DATE)
+        private LocalDate dataFim;
+    }
+
+    @Data
+    @NoArgsConstructor
+    @AllArgsConstructor
+    public static class ServicoExternoForm {
+        private Long militarId;
+        @DateTimeFormat(iso = DateTimeFormat.ISO.DATE)
+        private LocalDate dataInicio;
+        @DateTimeFormat(iso = DateTimeFormat.ISO.DATE)
+        private LocalDate dataFim;
+    }
 
     // --- MILITAR ---
     @GetMapping("/novo-militar")
@@ -61,21 +84,21 @@ public class AdminController {
         return "redirect:/dashboard";
     }
 
-    // --- AFASTAMENTO (CORRIGIDO) ---
+    // --- AFASTAMENTO ---
     @GetMapping("/afastar")
     public String getFormularioAfastar(Model model) {
         model.addAttribute("listaMilitaresAtivos", escalaService.getMilitaresAtivos());
         model.addAttribute("listaMotivos", MotivoInatividade.values());
         model.addAttribute("listaMilitaresInativos", escalaService.getMilitaresInativos());
         
-        // Passa o objeto instanciado para o th:object do formulário Thymeleaf não disparar erro 500
+        // Agora instanciamos a classe DTO com setters liberados para o Thymeleaf
         model.addAttribute("afastamentoForm", new AfastamentoForm(null, null, LocalDate.now(), LocalDate.now())); 
         return "admin-afastar";
     }
     
     @PostMapping("/salvar-afastamento")
     public String salvarAfastamento(@ModelAttribute AfastamentoForm form) {
-        escalaService.afastarMilitar(form.militarId(), form.motivo(), form.dataInicio(), form.dataFim());
+        escalaService.afastarMilitar(form.getMilitarId(), form.getMotivo(), form.getDataInicio(), form.getDataFim());
         return "redirect:/dashboard";
     }
 
@@ -105,7 +128,7 @@ public class AdminController {
 
     @PostMapping("/agendar-externo")
     public String agendarServicoExterno(@ModelAttribute ServicoExternoForm form) {
-        escalaService.agendarServicoExterno(form.militarId(), form.dataInicio(), form.dataFim());
+        escalaService.agendarServicoExterno(form.getMilitarId(), form.getDataInicio(), form.getDataFim());
         return "redirect:/admin/controle";
     }
 
@@ -115,16 +138,16 @@ public class AdminController {
         return "redirect:/admin/controle";
     }
 
-    // --- FORÇAR ESCALA PELO BOTÃO DA TABELA (PRESERVA FOLGA DO ANTERIOR) ---
+    // --- FORÇAR ESCALA PELO BOTÃO DA TABELA ---
     @PostMapping("/forcar-escala")
     public String forcarEscalaPeloBotaoDaTabela(@RequestParam("id") Long militarEntraId, RedirectAttributes attributes) {
         Militar titularAntigo = escalaService.getProximoPermanencia();
         Militar entra = escalaService.findMilitarById(militarEntraId);
 
         if (entra != null) {
-            entra.setFolga(0);
-            entra.setDataUltimoServico(LocalDate.now());
-            escalaService.editarMilitar(entra);
+            // CORREÇÃO: Utilizando os métodos corretos para salvar folga e data no banco
+            escalaService.atualizarFolgaManual(entra.getId(), 0);
+            escalaService.atualizarDataUltimoServicoManual(entra.getId(), LocalDate.now());
 
             if (titularAntigo != null && !titularAntigo.getId().equals(entra.getId())) {
                 attributes.addFlashAttribute("mensagem", "Escala alterada! " + entra.getNomeGuerra() + 
@@ -147,9 +170,9 @@ public class AdminController {
         if (zerarFolga) {
             Militar sai = escalaService.findMilitarById(militarSaiId);
             if (sai != null) {
-                sai.setFolga(0);
-                sai.setDataUltimoServico(LocalDate.now());
-                escalaService.editarMilitar(sai);
+                // CORREÇÃO: Utilizando os métodos corretos de atualização do Service
+                escalaService.atualizarFolgaManual(sai.getId(), 0);
+                escalaService.atualizarDataUltimoServicoManual(sai.getId(), LocalDate.now());
                 attributes.addFlashAttribute("mensagem", "Troca realizada: folga de " + sai.getNomeGuerra() + " foi ZERADA.");
             }
         } else {
