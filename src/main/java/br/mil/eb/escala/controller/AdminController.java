@@ -28,7 +28,7 @@ public class AdminController {
     @AllArgsConstructor
     public static class AfastamentoForm {
         private Long militarId;
-        private String motivo; // Agora é String para aceitar texto livre
+        private String motivoAfastamento; // Corrigido para bater exatamente com a entidade e HTML
         @DateTimeFormat(iso = DateTimeFormat.ISO.DATE)
         private LocalDate dataInicio;
         @DateTimeFormat(iso = DateTimeFormat.ISO.DATE)
@@ -96,7 +96,8 @@ public class AdminController {
     
     @PostMapping("/salvar-afastamento")
     public String salvarAfastamento(@ModelAttribute AfastamentoForm form) {
-        escalaService.afastarMilitar(form.getMilitarId(), form.getMotivo(), form.getDataInicio(), form.getDataFim());
+        // Chamada corrigida para getMotivoAfastamento()
+        escalaService.afastarMilitar(form.getMilitarId(), form.getMotivoAfastamento(), form.getDataInicio(), form.getDataFim());
         return "redirect:/dashboard";
     }
 
