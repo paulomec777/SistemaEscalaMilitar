@@ -43,6 +43,7 @@ public class Militar {
     private LocalDate dataFimAfastamento;
     
     // Mudado de Enum para String para aceitar texto livre digitado pelo ADM
+    @Column(length = 255)
     private String motivoAfastamento;
     
     /**
