@@ -39,7 +39,7 @@ public class EscalaService {
         return todos.stream()
                 .filter(m -> m.estaAptoParaServico(hoje)) // Filtra tirando os doentes/afastados/missão
                 .filter(m -> m.getDataUltimoServico() == null || !m.getDataUltimoServico().equals(ontem)) 
-                .sorted(Comparator.comparing(Militar::getFolga).reversed() // Maior folga primeiro
+                .sorted(Comparator.comparing(Militar::getFolga).reversed() // Maior folga primeiro, sem checagem de null para int
                         .thenComparing(Militar::getDataUltimoServico, Comparator.nullsFirst(Comparator.naturalOrder())))
                 .collect(Collectors.toList());
     }
@@ -59,7 +59,7 @@ public class EscalaService {
     public List<Militar> getTodosMilitaresParaDashboard() {
         return militarRepository.findAll().stream()
                 .sorted(Comparator.comparing(Militar::isAtivoNaEscala).reversed()
-                        .thenComparing(Militar::getFolga).reversed())
+                        .thenComparing(Militar::getFolga).reversed()) // Sem checagem de null para int
                 .collect(Collectors.toList());
     }
 
@@ -111,8 +111,7 @@ public class EscalaService {
                     m.setDataUltimoServico(hoje); 
                 } else {
                     // CONGELAMENTO AUTOMÁTICO:
-                    // Se ele NÃO for o permanência (porque está de folga, ou doente, ou em missão externa),
-                    // ele entra aqui e ganha +1 de folga normalmente. A folga dele CONTINUA contando!
+                    // Se ele NÃO for o permanência, ganha +1 de folga normalmente.
                     m.setFolga(m.getFolga() + 1); 
                 }
             } else {
@@ -136,6 +135,7 @@ public class EscalaService {
     public void salvarNovoMilitar(Militar militar) {
         militar.setAtivoNaEscala(true);
         militar.setDataUltimoServico(LocalDate.now()); 
+        militar.setFolga(0); // Garante que comece em 0
         militarRepository.save(militar);
     }
     
