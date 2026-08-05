@@ -70,9 +70,9 @@ public class Militar {
                 return false; 
             }
 
-            // Regra das 48h de Descanso (3 dias após para garantir 2 dias cheios)
-            LocalDate dataLiberacao = dataFimServicoExterno.plusDays(3);
-            if (dataServico.isAfter(dataFimServicoExterno) && dataServico.isBefore(dataLiberacao)) {
+            // Regra das 48h: Dia do serviço + 1 dia de folga seguinte (dataFim + 1 dia)
+            LocalDate dataLiberacao = dataFimServicoExterno.plusDays(1);
+            if (dataServico.isEqual(dataLiberacao)) {
                 return false; 
             }            
         }

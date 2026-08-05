@@ -91,7 +91,6 @@ public class AdminController {
         model.addAttribute("listaMotivos", MotivoInatividade.values());
         model.addAttribute("listaMilitaresInativos", escalaService.getMilitaresInativos());
         
-        // Agora instanciamos a classe DTO com setters liberados para o Thymeleaf
         model.addAttribute("afastamentoForm", new AfastamentoForm(null, null, LocalDate.now(), LocalDate.now())); 
         return "admin-afastar";
     }
@@ -138,6 +137,13 @@ public class AdminController {
         return "redirect:/admin/controle";
     }
 
+    // --- ROTA DE TROCA DE SERVIÇO (ADICIONADA PARA ELIMINAR O ERRO 404) ---
+    @GetMapping("/troca")
+    public String getFormularioTroca(Model model) {
+        model.addAttribute("listaMilitaresAtivos", escalaService.getMilitaresAtivos());
+        return "admin-troca";
+    }
+
     // --- FORÇAR ESCALA PELO BOTÃO DA TABELA ---
     @PostMapping("/forcar-escala")
     public String forcarEscalaPeloBotaoDaTabela(@RequestParam("id") Long militarEntraId, RedirectAttributes attributes) {
@@ -145,7 +151,6 @@ public class AdminController {
         Militar entra = escalaService.findMilitarById(militarEntraId);
 
         if (entra != null) {
-            // CORREÇÃO: Utilizando os métodos corretos para salvar folga e data no banco
             escalaService.atualizarFolgaManual(entra.getId(), 0);
             escalaService.atualizarDataUltimoServicoManual(entra.getId(), LocalDate.now());
 
@@ -170,7 +175,6 @@ public class AdminController {
         if (zerarFolga) {
             Militar sai = escalaService.findMilitarById(militarSaiId);
             if (sai != null) {
-                // CORREÇÃO: Utilizando os métodos corretos de atualização do Service
                 escalaService.atualizarFolgaManual(sai.getId(), 0);
                 escalaService.atualizarDataUltimoServicoManual(sai.getId(), LocalDate.now());
                 attributes.addFlashAttribute("mensagem", "Troca realizada: folga de " + sai.getNomeGuerra() + " foi ZERADA.");
