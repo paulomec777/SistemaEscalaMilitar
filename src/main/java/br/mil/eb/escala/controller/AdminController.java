@@ -83,37 +83,32 @@ public class AdminController {
         return "redirect:/dashboard";
     }
 
-    // --- AFASTAMENTO ---
+ // --- AFASTAMENTO ---
     @GetMapping("/afastar")
     public String getFormularioAfastar(Model model) {
         model.addAttribute("listaMilitaresAtivos", escalaService.getMilitaresAtivos());
         model.addAttribute("listaMilitaresInativos", escalaService.getMilitaresInativos());
-        
-        // Inicializa o form com uma String vazia para o motivo
-        model.addAttribute("afastamentoForm", new AfastamentoForm(null, "", LocalDate.now(), LocalDate.now())); 
         return "admin-afastar";
     }
     
     @PostMapping("/salvar-afastamento")
-    public String salvarAfastamento(@ModelAttribute AfastamentoForm form) {
-        // Chamada corrigida para getMotivoAfastamento()
-        escalaService.afastarMilitar(form.getMilitarId(), form.getMotivoAfastamento(), form.getDataInicio(), form.getDataFim());
-        return "redirect:/dashboard";
+    public String salvarAfastamento(
+            @RequestParam("militarId") Long militarId, 
+            @RequestParam("motivoAfastamento") String motivoAfastamento,
+            @RequestParam("dataInicio") @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate dataInicio,
+            @RequestParam("dataFim") @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate dataFim) {
+        
+        // Salva o afastamento com o texto livre
+        escalaService.afastarMilitar(militarId, motivoAfastamento, dataInicio, dataFim);
+        
+        // Redireciona para a mesma tela, assim você vê o militar na tabela de baixo na hora!
+        return "redirect:/admin/afastar";
     }
 
     @GetMapping("/reativar/{id}")
     public String reativarMilitar(@PathVariable("id") Long id) {
         escalaService.reativarMilitar(id);
         return "redirect:/admin/afastar";
-    }
-
-    @PostMapping("/atualizar-data-servico")
-    public String atualizarDataServico(
-            @RequestParam("id") Long id, 
-            @RequestParam("novaData") @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate novaData) {
-        
-        escalaService.atualizarDataUltimoServicoManual(id, novaData);
-        return "redirect:/dashboard";
     }
 
     // --- SERVIÇO EXTERNO ---
