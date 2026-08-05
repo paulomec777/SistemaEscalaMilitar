@@ -28,7 +28,7 @@ public class AdminController {
     @AllArgsConstructor
     public static class AfastamentoForm {
         private Long militarId;
-        private String motivoAfastamento; // Corrigido para bater exatamente com a entidade e HTML
+        private String motivoAfastamento; 
         @DateTimeFormat(iso = DateTimeFormat.ISO.DATE)
         private LocalDate dataInicio;
         @DateTimeFormat(iso = DateTimeFormat.ISO.DATE)
@@ -83,7 +83,7 @@ public class AdminController {
         return "redirect:/dashboard";
     }
 
- // --- AFASTAMENTO ---
+    // --- AFASTAMENTO ---
     @GetMapping("/afastar")
     public String getFormularioAfastar(Model model) {
         model.addAttribute("listaMilitaresAtivos", escalaService.getMilitaresAtivos());
@@ -91,17 +91,37 @@ public class AdminController {
         return "admin-afastar";
     }
     
+    // MÉTODO BLINDADO: Evita o erro 500 e joga o motivo real nos logs
     @PostMapping("/salvar-afastamento")
     public String salvarAfastamento(
-            @RequestParam("militarId") Long militarId, 
-            @RequestParam("motivoAfastamento") String motivoAfastamento,
-            @RequestParam("dataInicio") @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate dataInicio,
-            @RequestParam("dataFim") @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate dataFim) {
+            @RequestParam(value = "militarId", required = false) Long militarId, 
+            @RequestParam(value = "motivoAfastamento", required = false) String motivoAfastamento,
+            @RequestParam(value = "dataInicio", required = false) String dataInicioStr,
+            @RequestParam(value = "dataFim", required = false) String dataFimStr,
+            RedirectAttributes attributes) {
         
-        // Salva o afastamento com o texto livre
-        escalaService.afastarMilitar(militarId, motivoAfastamento, dataInicio, dataFim);
+        try {
+            System.out.println("---- INICIANDO SALVAMENTO DE AFASTAMENTO ----");
+            System.out.println("Militar ID: " + militarId);
+            System.out.println("Motivo: " + motivoAfastamento);
+            System.out.println("Data Início: " + dataInicioStr);
+            System.out.println("Data Fim: " + dataFimStr);
+            
+            // Converte as datas manualmente de forma segura
+            LocalDate dataInicio = LocalDate.parse(dataInicioStr);
+            LocalDate dataFim = LocalDate.parse(dataFimStr);
+            
+            // Chama o serviço para salvar
+            escalaService.afastarMilitar(militarId, motivoAfastamento, dataInicio, dataFim);
+            
+            System.out.println("---- AFASTAMENTO SALVO COM SUCESSO ----");
+            
+        } catch (Exception e) {
+            System.out.println("---- ERRO GRAVE AO SALVAR AFASTAMENTO ----");
+            e.printStackTrace(); // Imprime o erro exato nos logs do Railway
+        }
         
-        // Redireciona para a mesma tela, assim você vê o militar na tabela de baixo na hora!
+        // Sempre volta para a tela de afastar, mesmo se der erro, evitando a tela branca (Whitelabel)
         return "redirect:/admin/afastar";
     }
 
