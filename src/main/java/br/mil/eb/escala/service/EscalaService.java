@@ -46,7 +46,7 @@ public class EscalaService {
 
     // O mais folgado da fila de aptos tira o serviço hoje
     public Militar getProximoPermanencia() {
-        List<Militar> ordenados = getMilitaresOrdenadosParaEscala();
+        List<Militar> ordenados = getMilitaresOrdenadosParaEscala(); 
         return ordenados.isEmpty() ? null : ordenados.get(0);
     }
     
