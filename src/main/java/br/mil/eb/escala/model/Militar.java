@@ -28,14 +28,15 @@ public class Militar {
     private LocalDate dataInicioServicoExterno; 
     private LocalDate dataFimServicoExterno; 
 
+    // Inicialização direta no objeto garante que não venha false por engano
     @Column(columnDefinition = "boolean default true")
-    private boolean ativoNaEscala; 
+    private boolean ativoNaEscala = true; 
 
-    // NOVO: Controle manual do ADM para impedir o militar
+    // Controle manual do ADM para impedir o militar
     @Column(columnDefinition = "boolean default true")
     private boolean disponivelManualmente = true;
 
-    // NOVO: Campo para prescrever o porquê do impedimento
+    // Campo para prescrever o porquê do impedimento
     private String justificativaImpedimento;
 
     private LocalDate dataInicioAfastamento;
@@ -87,5 +88,19 @@ public class Militar {
     public void liberarMilitar() {
         this.disponivelManualmente = true;
         this.justificativaImpedimento = null;
+    }
+
+    /**
+     * NOVO: Método virtual para mastigar a regra de exibição para o Front-end (Thymeleaf).
+     * Como o método chama "getStatus", o HTML pode acessar via "militar.status".
+     */
+    public String getStatus() {
+        if (!ativoNaEscala || !disponivelManualmente) {
+            return "AFASTADO";
+        }
+        if (isEmServicoExterno()) {
+            return "EXTERNO";
+        }
+        return "APTO";
     }
 }
