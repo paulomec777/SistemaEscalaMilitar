@@ -24,14 +24,17 @@ public class FeriadoController {
     public String listar(Model model) {
         model.addAttribute("feriados", feriadoRepository.findAllByOrderByDataAsc());
         model.addAttribute("feriado", new Feriado()); // Objeto para o formulário de cadastro
-        return "admin/feriados/lista"; // Caminho da sua página HTML
+        
+        // CORRIGIDO: Agora aponta para o arquivo admin-feriados.html na pasta templates
+        return "admin-feriados"; 
     }
 
     // Salva um novo feriado (Nacional ou do Exército)
     @PostMapping("/salvar")
     public String salvar(@Valid Feriado feriado, BindingResult result, RedirectAttributes attributes) {
         if (result.hasErrors()) {
-            return "admin/feriados/lista";
+            // CORRIGIDO: Mantém o usuário na mesma tela em caso de erro de validação
+            return "admin-feriados"; 
         }
 
         // Verifica se a data já está cadastrada para evitar duplicidade
