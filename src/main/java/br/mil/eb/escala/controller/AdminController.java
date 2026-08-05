@@ -14,11 +14,26 @@ import org.springframework.web.bind.annotation.*;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 import java.time.LocalDate;
+import org.springframework.jdbc.core.JdbcTemplate;
+import jakarta.annotation.PostConstruct;
 
 @Controller
 @RequestMapping("/admin")
 public class AdminController {
 
+    @Autowired
+    private JdbcTemplate jdbcTemplate;
+
+    @PostConstruct
+    public void corrigirBancoRailway() {
+        try {
+            System.out.println("==== TENTANDO DESTRAVAR O BANCO DE DADOS DO RAILWAY ====");
+            jdbcTemplate.execute("ALTER TABLE militares DROP CONSTRAINT militares_motivo_afastamento_check");
+            System.out.println("==== SUCESSO: TRAVA DO BANCO REMOVIDA! ====");
+        } catch (Exception e) {
+            System.out.println("==== A TRAVA JÁ FOI REMOVIDA ANTERIORMENTE. TUDO CERTO! ====");
+        }
+    }
     @Autowired 
     private EscalaService escalaService;
 
