@@ -95,6 +95,7 @@ public class EscalaService {
         }
     }
 
+    // MOTOR DA MEIA-NOITE ATUALIZADO COM O ESCUDO DO SERVIÇO PAGO
     @Scheduled(cron = "0 0 0 * * *", zone = "America/Sao_Paulo")
     @Transactional 
     public void avancarDiaDaEscala() {
@@ -117,7 +118,17 @@ public class EscalaService {
             if (ehDiaDeServico) {
                 // Se o militar trabalhou no dia que acabou de se encerrar (data do último serviço = ontem)
                 if (m.getDataUltimoServico() != null && m.getDataUltimoServico().isEqual(ontem)) {
-                    m.setFolga(0); // Zera a folga apenas agora à meia-noite!
+                    
+                    // VERIFICA SE ELE TEM O ESCUDO DO SERVIÇO PAGO
+                    if (m.isServicoPagoTemporario()) {
+                        // Trabalhou pago: a folga NÃO zera. Ele ganha +1 dia normal e perde o escudo.
+                        m.setFolga(m.getFolga() + 1);
+                        m.setServicoPagoTemporario(false);
+                    } else {
+                        // Tirou serviço normal ou missão: zera a folga legitimamente.
+                        m.setFolga(0); 
+                    }
+                    
                 } else {
                     // Quem não trabalhou ganha +1 de folga
                     m.setFolga(m.getFolga() + 1); 
@@ -229,12 +240,18 @@ public class EscalaService {
 
         switch (tipoTroca) {
             case "PAGO":
+                // Quem paga perde a folga, mas NÃO tem a data mudada para hoje (não assume o Dashboard)
                 sai.setFolga(0);
-                sai.setDataUltimoServico(hoje);
+                
+                // Quem entra assume a data de hoje para aparecer no Dashboard...
+                entra.setDataUltimoServico(hoje);
+                
+                // ... e ATIVA O ESCUDO para não zerar a folga à meia-noite!
+                entra.setServicoPagoTemporario(true);
                 break;
                 
             case "MISSAO":
-                // Força o Cb Tomaz a ser exibido no Dashboard hoje sem zerar a folga dele ainda
+                // Força o substituto a ser exibido no Dashboard hoje (sem o escudo, pois a missão zera a folga dele à meia-noite)
                 entra.setDataUltimoServico(hoje);
                 break;
                 
