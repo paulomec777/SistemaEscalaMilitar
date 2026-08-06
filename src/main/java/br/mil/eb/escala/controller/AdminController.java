@@ -100,7 +100,7 @@ public class AdminController {
         } catch (Exception e) {
             System.out.println("Erro ao converter data inserida no dashboard: " + e.getMessage());
         }
-        return "redirect:/dashboard"; // ou o mapeamento correto do seu painel principal
+        return "redirect:/dashboard"; 
     }
     
     @PostMapping("/deletar/{id}")
@@ -133,21 +133,18 @@ public class AdminController {
             System.out.println("Data Início: " + dataInicioStr);
             System.out.println("Data Fim: " + dataFimStr);
             
-            // Converte as datas manualmente de forma segura
             LocalDate dataInicio = LocalDate.parse(dataInicioStr);
             LocalDate dataFim = LocalDate.parse(dataFimStr);
             
-            // Chama o serviço para salvar
             escalaService.afastarMilitar(militarId, motivoAfastamento, dataInicio, dataFim);
             
             System.out.println("---- AFASTAMENTO SALVO COM SUCESSO ----");
             
         } catch (Exception e) {
             System.out.println("---- ERRO GRAVE AO SALVAR AFASTAMENTO ----");
-            e.printStackTrace(); // Imprime o erro exato nos logs do Railway
+            e.printStackTrace(); 
         }
         
-        // Sempre volta para a tela de afastar, mesmo se der erro, evitando a tela branca (Whitelabel)
         return "redirect:/admin/afastar";
     }
 
@@ -178,7 +175,7 @@ public class AdminController {
         return "redirect:/admin/controle";
     }
 
-    // --- TROCA DE SERVIÇO ---
+    // --- TROCA DE SERVIÇO (ATUALIZADO PARA AS 3 REGRAS) ---
     @GetMapping("/troca")
     public String getFormularioTroca(Model model) {
         model.addAttribute("listaMilitaresAtivos", escalaService.getMilitaresAtivos());
@@ -208,21 +205,22 @@ public class AdminController {
     public String salvarTroca(
             @RequestParam Long militarSaiId, 
             @RequestParam Long militarEntraId,
-            @RequestParam(value = "zerarFolga", defaultValue = "false") boolean zerarFolga,
+            @RequestParam String tipoTroca,
             RedirectAttributes attributes) {
         
-        if (zerarFolga) {
-            Militar sai = escalaService.findMilitarById(militarSaiId);
-            if (sai != null) {
-                escalaService.atualizarFolgaManual(sai.getId(), 0);
-                escalaService.atualizarDataUltimoServicoManual(sai.getId(), LocalDate.now());
-                attributes.addFlashAttribute("mensagem", "Troca realizada: folga de " + sai.getNomeGuerra() + " foi ZERADA.");
-            }
-        } else {
-            attributes.addFlashAttribute("mensagem", "Troca realizada: folgas preservadas.");
+        // Executa a lógica inteligente de troca com base na regra selecionada
+        escalaService.processarTroca(militarSaiId, militarEntraId, tipoTroca);
+        
+        String mensagemRegra = "";
+        if ("PAGO".equals(tipoTroca)) {
+            mensagemRegra = "Troca registrada como Serviço Pago (Titular arcou com o turno).";
+        } else if ("MISSAO".equals(tipoTroca)) {
+            mensagemRegra = "Troca registrada por Missão/Necessidade do Serviço.";
+        } else if ("PERMUTA".equals(tipoTroca)) {
+            mensagemRegra = "Troca registrada por Permuta/Acordo (Folgas invertidas).";
         }
 
-        escalaService.processarTroca(militarSaiId, militarEntraId);
+        attributes.addFlashAttribute("mensagem", mensagemRegra);
         return "redirect:/dashboard";
     }
     
