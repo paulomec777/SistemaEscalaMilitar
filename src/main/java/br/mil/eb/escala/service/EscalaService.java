@@ -64,31 +64,36 @@ public class EscalaService {
     }
 
     @Transactional
-    public void atualizarDataUltimoServicoManual(Long idMilitar, LocalDate novaData) {
+    public void atualizarFolgaManual(Long idMilitar, int novaFolga) {
         Militar militar = findMilitarById(idMilitar);
         if (militar != null) {
-            militar.setDataUltimoServico(novaData);
-            
-            // Recalcula a folga automaticamente para bater com a nova data!
-            LocalDate hoje = LocalDate.now();
-            int folgaCalculada = 0;
-            if (novaData.isBefore(hoje)) {
-                folgaCalculada = (int) java.time.temporal.ChronoUnit.DAYS.between(novaData, hoje);
-            }
-            militar.setFolga(folgaCalculada);
-            
+            militar.setFolga(novaFolga);
             militarRepository.save(militar);
         }
     }
 
+    // =========================================================
+    // MÉTODO ATUALIZADO: ATUALIZA DATA E RECALCULA FOLGA
+    // =========================================================
     @Transactional
     public void atualizarDataUltimoServicoManual(Long idMilitar, LocalDate novaData) {
         Militar militar = findMilitarById(idMilitar);
         if (militar != null) {
             militar.setDataUltimoServico(novaData);
+            
+            // Recalcula a folga automaticamente para bater com a nova data informada!
+            LocalDate hoje = LocalDate.now();
+            int folgaCalculada = 0;
+            
+            if (novaData.isBefore(hoje)) {
+                folgaCalculada = (int) ChronoUnit.DAYS.between(novaData, hoje);
+            }
+            
+            militar.setFolga(folgaCalculada);
             militarRepository.save(militar);
         }
     }
+    // =========================================================
 
     // --- MOTOR DA ESCALA COM CONGELAMENTO ---
     
@@ -141,9 +146,6 @@ public class EscalaService {
         return militarRepository.findById(id).orElse(null); 
     }
 
-    // =========================================================
-    // MÉTODO ATUALIZADO: INSERÇÃO MANUAL HÍBRIDA
-    // =========================================================
     public void salvarNovoMilitar(Militar militar) {
         militar.setAtivoNaEscala(true);
         
@@ -165,7 +167,6 @@ public class EscalaService {
         militar.setFolga(folgaCalculada); 
         militarRepository.save(militar);
     }
-    // =========================================================
     
     public void editarMilitar(Militar dados) {
         Militar original = findMilitarById(dados.getId());
