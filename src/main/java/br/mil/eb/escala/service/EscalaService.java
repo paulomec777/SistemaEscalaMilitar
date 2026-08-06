@@ -14,7 +14,7 @@ import org.springframework.stereotype.Service;
 
 import java.time.DayOfWeek;
 import java.time.LocalDate;
-import java.time.temporal.ChronoUnit; // Importação adicionada para calcular as folgas
+import java.time.temporal.ChronoUnit; 
 import java.util.Comparator;
 import java.util.List;
 import java.util.stream.Collectors;
@@ -72,16 +72,12 @@ public class EscalaService {
         }
     }
 
-    // =========================================================
-    // MÉTODO ATUALIZADO: ATUALIZA DATA E RECALCULA FOLGA
-    // =========================================================
     @Transactional
     public void atualizarDataUltimoServicoManual(Long idMilitar, LocalDate novaData) {
         Militar militar = findMilitarById(idMilitar);
         if (militar != null) {
             militar.setDataUltimoServico(novaData);
             
-            // Recalcula a folga automaticamente para bater com a nova data informada!
             LocalDate hoje = LocalDate.now();
             int folgaCalculada = 0;
             
@@ -93,7 +89,6 @@ public class EscalaService {
             militarRepository.save(militar);
         }
     }
-    // =========================================================
 
     // --- MOTOR DA ESCALA COM CONGELAMENTO ---
     
@@ -103,13 +98,10 @@ public class EscalaService {
         LocalDate hoje = LocalDate.now();
         boolean ehDiaDeServico = isDiaUtil(hoje); 
         
-        // Elege o militar mais folgado APTOS do dia
         Militar permanencia = ehDiaDeServico ? getProximoPermanencia() : null;
-        
         List<Militar> todos = militarRepository.findAll();
 
         for (Militar m : todos) {
-            // Reativar afastamentos/doenças vencidas automaticamente
             if (!m.isAtivoNaEscala() && m.getDataFimAfastamento() != null && 
                (m.getDataFimAfastamento().isEqual(hoje) || m.getDataFimAfastamento().isBefore(hoje))) {
                     m.setAtivoNaEscala(true);
@@ -119,17 +111,13 @@ public class EscalaService {
             }
 
             if (ehDiaDeServico) {
-                // Se ele for o eleito do dia, o serviço dele é computado e a folga zera
                 if (permanencia != null && m.getId().equals(permanencia.getId())) {
                     m.setFolga(0); 
                     m.setDataUltimoServico(hoje); 
                 } else {
-                    // CONGELAMENTO AUTOMÁTICO:
-                    // Se ele NÃO for o permanência, ganha +1 de folga normalmente.
                     m.setFolga(m.getFolga() + 1); 
                 }
             } else {
-                // Finais de semana e feriados: todos ganham folga e ninguém tira serviço
                 m.setFolga(m.getFolga() + 1);
             }
         }
@@ -149,17 +137,14 @@ public class EscalaService {
     public void salvarNovoMilitar(Militar militar) {
         militar.setAtivoNaEscala(true);
         
-        // Fallback: Se a data não vier do HTML, assume a data de hoje para não quebrar o banco
         if (militar.getDataUltimoServico() == null) {
             militar.setDataUltimoServico(LocalDate.now());
         }
 
-        // Calcula a folga inicial do novato com base na data que a administração informou
         LocalDate hoje = LocalDate.now();
         LocalDate dataUltimoSv = militar.getDataUltimoServico();
         int folgaCalculada = 0;
 
-        // Se a data informada for no passado, calcula a diferença em dias
         if (dataUltimoSv.isBefore(hoje)) {
             folgaCalculada = (int) ChronoUnit.DAYS.between(dataUltimoSv, hoje);
         }
@@ -231,15 +216,53 @@ public class EscalaService {
         }
     }
     
-    public void processarTroca(Long idSai, Long idEntra) {
+    // =========================================================
+    // MÉTODO ATUALIZADO: LOGÍSTICA INTELIGENTE DE TROCAS
+    // =========================================================
+    @Transactional
+    public void processarTroca(Long idSai, Long idEntra, String tipoTroca) {
         Militar sai = findMilitarById(idSai);
         Militar entra = findMilitarById(idEntra);
-        if (sai != null && entra != null) {
-            entra.setFolga(0);
-            entra.setDataUltimoServico(LocalDate.now());
-            militarRepository.save(entra);
+        
+        if (sai == null || entra == null) return;
+        
+        LocalDate hoje = LocalDate.now();
+
+        // Garante que se o tipoTroca vier nulo por segurança, assume Missão
+        if (tipoTroca == null) {
+            tipoTroca = "MISSAO";
         }
+
+        switch (tipoTroca) {
+            case "PAGO":
+                // Serviço Pago: O Titular que sai arca com o turno (zera folga dele). O substituto mantém a folga.
+                sai.setFolga(0);
+                sai.setDataUltimoServico(hoje);
+                break;
+                
+            case "MISSAO":
+                // Missão / Necessidade: O titular preserva a folga. Quem entra assume o serviço (zera folga).
+                entra.setFolga(0);
+                entra.setDataUltimoServico(hoje);
+                break;
+                
+            case "PERMUTA":
+                // Troca Casada: Os dois literalmente invertem de posição de folga e data de último serviço.
+                int folgaTemp = sai.getFolga();
+                LocalDate dataTemp = sai.getDataUltimoServico();
+                
+                sai.setFolga(entra.getFolga());
+                sai.setDataUltimoServico(entra.getDataUltimoServico());
+                
+                entra.setFolga(folgaTemp);
+                entra.setDataUltimoServico(dataTemp);
+                break;
+        }
+        
+        militarRepository.save(sai);
+        militarRepository.save(entra);
     }
+    // =========================================================
     
     public List<Feriado> getTodosFeriados() {
         return feriadoRepository.findAll();
