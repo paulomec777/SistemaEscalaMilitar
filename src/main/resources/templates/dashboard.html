@@ -209,11 +209,31 @@
                             <span th:if="${militar?.dataUltimoServico == null}">--/--/----</span>
                         </td>
                         
+                        <!-- COLUNA DE AÇÕES ADMINISTRATIVAS (ATUALIZADA) -->
                         <td sec:authorize="hasRole('ADM')" style="text-align: center;">
+                            
+                            <!-- Botão Editar Original -->
                             <a th:if="${militar?.id != null}" 
                                th:href="@{/admin/editar/{id}(id=${militar.id})}" 
                                class="btn-salvar-data" 
-                               style="text-decoration: none;">Editar</a>
+                               style="text-decoration: none; display: inline-block; vertical-align: middle;">Editar</a>
+
+                            <!-- NOVO: Formulário de Atualização Rápida de Data -->
+                            <form th:if="${militar?.id != null}" th:action="@{/admin/atualizar-data-servico}" method="post" style="display:inline-block; margin-left: 10px; vertical-align: middle;">
+                                <!-- Manda o ID do militar escondido -->
+                                <input type="hidden" name="id" th:value="${militar.id}" />
+                                
+                                <!-- Calendário para escolher a data antiga -->
+                                <input type="date" name="novaData" required 
+                                       style="padding: 3px; font-size: 12px; border-radius: 4px; border: 1px solid #ccc;">
+                                
+                                <!-- Botão Salvar Verde -->
+                                <button type="submit" 
+                                        style="background-color: #2ECC71; color: white; border: none; padding: 4px 8px; border-radius: 4px; cursor: pointer; font-size: 12px; font-weight: bold; margin-left: 5px;">
+                                    Salvar Data
+                                </button>
+                            </form>
+
                         </td>
                     </tr>
                 </tbody>
