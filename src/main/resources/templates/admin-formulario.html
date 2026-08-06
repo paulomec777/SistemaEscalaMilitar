@@ -8,7 +8,8 @@
     <!-- Linka o CSS principal -->
     <link rel="stylesheet" th:href="@{/css/style.css}">
 </head>
-<body>
+<!-- 1. Adicionado o Flexbox no Body para ocupar 100% da altura da tela -->
+<body style="display: flex; flex-direction: column; min-height: 100vh; margin: 0;">
 
     <!-- Cabeçalho (Menu Completo) -->
     <header class="header">
@@ -30,7 +31,8 @@
     </header>
 
     <!-- Conteúdo Principal -->
-    <div class="main-container">
+    <!-- 2. Adicionado 'flex: 1' para que esta div preencha o meio da tela empurrando o rodapé -->
+    <div class="main-container" style="flex: 1;">
         
         <!-- Cartão Centralizado -->
         <div class="card" style="max-width: 600px; margin: 0 auto;">
@@ -79,10 +81,12 @@
             
         </div>
     </div>
- <footer style="text-align: center; padding: 20px; background-color: #f1f1f1; margin-top: 50px;">
-        <p>
+    
+    <!-- 3. Rodapé ajustado (removido o margin-top fixo e adicionado box-sizing e width 100%) -->
+    <footer style="text-align: center; padding: 20px; background-color: #f1f1f1; width: 100%; box-sizing: border-box;">
+        <p style="margin: 0; color: #333;">
             Sistema de Escala Militar &copy; 2026 <br>
-            Desenvolvido com Java por <a href="https://www.linkedin.com/in/paulo-henrique-517268269" target="_blank"><strong>Cb Tomaz</strong></a>
+            Desenvolvido com Java por <a href="https://www.linkedin.com/in/paulo-henrique-517268269" target="_blank" style="color: #1a73e8; text-decoration: none;"><strong>Cb Tomaz</strong></a>
         </p>
     </footer>
 </body>
