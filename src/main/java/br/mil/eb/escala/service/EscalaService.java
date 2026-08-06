@@ -98,13 +98,14 @@ public class EscalaService {
     @Scheduled(cron = "0 0 0 * * *", zone = "America/Sao_Paulo")
     @Transactional 
     public void avancarDiaDaEscala() {
-        LocalDate hoje = LocalDate.now();
-        boolean ehDiaDeServico = isDiaUtil(hoje); 
+        LocalDate hoje = LocalDate.now(); // Amanhã (novo dia)
+        LocalDate ontem = hoje.minusDays(1); // O dia que acabou de se encerrar
+        boolean ehDiaDeServico = isDiaUtil(ontem); // Verifica se o dia que passou foi útil
         
-        Militar permanencia = ehDiaDeServico ? getProximoPermanencia() : null;
         List<Militar> todos = militarRepository.findAll();
 
         for (Militar m : todos) {
+            // Reativar afastamentos/doenças vencidas automaticamente
             if (!m.isAtivoNaEscala() && m.getDataFimAfastamento() != null && 
                (m.getDataFimAfastamento().isEqual(hoje) || m.getDataFimAfastamento().isBefore(hoje))) {
                     m.setAtivoNaEscala(true);
@@ -114,13 +115,15 @@ public class EscalaService {
             }
 
             if (ehDiaDeServico) {
-                if (permanencia != null && m.getId().equals(permanencia.getId())) {
-                    m.setFolga(0); 
-                    m.setDataUltimoServico(hoje); 
+                // Se o militar trabalhou no dia que acabou de se encerrar (data do último serviço = ontem)
+                if (m.getDataUltimoServico() != null && m.getDataUltimoServico().isEqual(ontem)) {
+                    m.setFolga(0); // Zera a folga apenas agora à meia-noite!
                 } else {
+                    // Quem não trabalhou ganha +1 de folga
                     m.setFolga(m.getFolga() + 1); 
                 }
             } else {
+                // Finais de semana e feriados: ninguém tira serviço, todos ganham folga
                 m.setFolga(m.getFolga() + 1);
             }
         }
