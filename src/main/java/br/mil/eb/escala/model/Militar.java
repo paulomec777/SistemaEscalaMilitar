@@ -45,6 +45,10 @@ public class Militar {
     // Mudado de Enum para String para aceitar texto livre digitado pelo ADM
     @Column(length = 255)
     private String motivoAfastamento;
+
+    // NOVO CAMPO: Escudo temporário para quem entra de Serviço Pago
+    @Column(name = "servico_pago_temporario")
+    private boolean servicoPagoTemporario = false;
     
     /**
      * Lógica central de aptidão. 
@@ -99,5 +103,14 @@ public class Militar {
             return "EXTERNO";
         }
         return "APTO";
+    }
+
+    // Getters e Setters do Escudo (Garantia extra de acesso para o motor da escala)
+    public boolean isServicoPagoTemporario() {
+        return servicoPagoTemporario;
+    }
+
+    public void setServicoPagoTemporario(boolean servicoPagoTemporario) {
+        this.servicoPagoTemporario = servicoPagoTemporario;
     }
 }
