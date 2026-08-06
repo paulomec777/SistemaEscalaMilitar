@@ -217,18 +217,19 @@ public class EscalaService {
 
         if (tipoTroca == null) tipoTroca = "MISSAO";
 
-        // Aplica a regra de folga conforme o motivo escolhido
         switch (tipoTroca) {
             case "PAGO":
+                // Serviço Pago: O Titular que sai zera a folga e vai para o fim da fila. O substituto mantém a folga.
                 sai.setFolga(0);
                 sai.setDataUltimoServico(hoje);
                 break;
                 
             case "MISSAO":
-                // Na missão, quem entra assume o encargo do dia. Para forçar o Dashboard a exibi-lo 
-                // imediatamente sem quebrar a folga de longo prazo, ajustamos temporariamente a data ou folga se necessário,
-                // ou garantimos que ele assuma o posto do dia.
-                entra.setDataUltimoServico(hoje.minusDays(1000)); // Garante prioridade visual no topo se necessário
+                // Missão: O Titular que sai preserva sua folga intacta (ex: 37 dias).
+                // O substituto (Cb Tomaz) assume o serviço de hoje, tendo sua folga zerada 
+                // e sua data ajustada para forçar o sistema a exibi-lo como Titular no Dashboard hoje!
+                entra.setFolga(0);
+                entra.setDataUltimoServico(hoje);
                 break;
                 
             case "PERMUTA":
