@@ -47,8 +47,9 @@ public class Militar {
     private String motivoAfastamento;
 
     // NOVO CAMPO: Escudo temporário para quem entra de Serviço Pago
+    // Alterado para 'Boolean' (Classe Wrapper) para evitar o Erro 500 com valores NULL no banco
     @Column(name = "servico_pago_temporario")
-    private boolean servicoPagoTemporario = false;
+    private Boolean servicoPagoTemporario = false;
     
     /**
      * Lógica central de aptidão. 
@@ -105,12 +106,12 @@ public class Militar {
         return "APTO";
     }
 
-    // Getters e Setters do Escudo (Garantia extra de acesso para o motor da escala)
+    // Getter inteligente que transforma NULL do banco de dados em false
     public boolean isServicoPagoTemporario() {
-        return servicoPagoTemporario;
+        return servicoPagoTemporario != null && servicoPagoTemporario;
     }
 
-    public void setServicoPagoTemporario(boolean servicoPagoTemporario) {
+    public void setServicoPagoTemporario(Boolean servicoPagoTemporario) {
         this.servicoPagoTemporario = servicoPagoTemporario;
     }
 }
