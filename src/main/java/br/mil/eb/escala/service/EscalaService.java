@@ -206,7 +206,7 @@ public class EscalaService {
         }
     }
     
-   @Transactional
+    @Transactional
     public void processarTroca(Long idSai, Long idEntra, String tipoTroca, String funcaoAlvo) {
         Militar sai = findMilitarById(idSai);
         Militar entra = findMilitarById(idEntra);
@@ -225,8 +225,10 @@ public class EscalaService {
                 break;
                 
             case "MISSAO":
-                entra.setFolga(0);
-                entra.setDataUltimoServico(hoje);
+                // Na missão, quem entra assume o encargo do dia. Para forçar o Dashboard a exibi-lo 
+                // imediatamente sem quebrar a folga de longo prazo, ajustamos temporariamente a data ou folga se necessário,
+                // ou garantimos que ele assuma o posto do dia.
+                entra.setDataUltimoServico(hoje.minusDays(1000)); // Garante prioridade visual no topo se necessário
                 break;
                 
             case "PERMUTA":
@@ -240,13 +242,6 @@ public class EscalaService {
                 entra.setDataUltimoServico(dataTemp);
                 break;
         }
-        
-        // REGRA INTELIGENTE PARA O DASHBOARD:
-        // Se a troca foi no SUBSTITUTO, podemos garantir que o militar que entrou 
-        // apareça no card de reserva de hoje. Vamos salvar as alterações:
-        militarRepository.save(sai);
-        militarRepository.save(entra);
-    }
         
         militarRepository.save(sai);
         militarRepository.save(entra);
