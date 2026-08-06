@@ -201,18 +201,18 @@ public class AdminController {
         return "redirect:/dashboard";
     }
 
-    @PostMapping("/salvar-troca")
+   @PostMapping("/salvar-troca")
     public String salvarTroca(
             @RequestParam Long militarSaiId, 
             @RequestParam Long militarEntraId,
             @RequestParam String tipoTroca,
-            @RequestParam String funcaoAlvo, // Recebe se é TITULAR ou SUBSTITUTO
+            @RequestParam(value = "funcaoAlvo", defaultValue = "TITULAR") String funcaoAlvo, // Blindado contra erros caso o HTML mude
             RedirectAttributes attributes) {
         
         // Executa a lógica inteligente de troca com base na regra e no posto selecionado
         escalaService.processarTroca(militarSaiId, militarEntraId, tipoTroca, funcaoAlvo);
         
-        String mensagemRegra = "Troca no posto de " + funcaoAlvo + " registrada com sucesso! ";
+        String mensagemRegra = "Troca registrada com sucesso! ";
         if ("PAGO".equals(tipoTroca)) {
             mensagemRegra += "Serviço Pago (Titular arcou com o turno).";
         } else if ("MISSAO".equals(tipoTroca)) {
