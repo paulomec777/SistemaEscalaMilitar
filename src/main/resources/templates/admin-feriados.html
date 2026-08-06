@@ -34,16 +34,17 @@
         <!-- Coluna 1: Adicionar Feriado -->
         <div class="card" style="margin-bottom: 1.5rem;">
             <div class="card-header" style="margin-bottom: 1rem;">
-                <h2>Adicionar Novo Feriado</h2>
+                <h2>Adicionar Novo Feriado / Dispensa</h2>
             </div>
             
-            <form th:action="@{/admin/salvar-feriado}" method="post" th:object="${feriadoVazio}">
+            <!-- CORRIGIDO: Rota de ação e nome do objeto -->
+            <form th:action="@{/admin/feriados/salvar}" method="post" th:object="${feriado}">
                 
                 <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 1rem; align-items: flex-end;">
                     <!-- Campo Descrição -->
                     <div>
                         <label for="descricao" style="display: block; margin-bottom: 0.5rem; font-weight: 500;">Descrição</label>
-                        <input type="text" id="descricao" th:field="*{descricao}" placeholder="Ex: Natal" style="width: 100%; padding: 0.75rem; border: 1px solid #ccc; border-radius: 8px; box-sizing: border-box;">
+                        <input type="text" id="descricao" th:field="*{descricao}" placeholder="Ex: Dispensa do Gen" style="width: 100%; padding: 0.75rem; border: 1px solid #ccc; border-radius: 8px; box-sizing: border-box;">
                     </div>
                     
                     <!-- Campo Data -->
@@ -60,7 +61,7 @@
         <!-- Coluna 2: Feriados Cadastrados -->
         <div class="card">
             <div class="card-header">
-                <h2>Feriados Cadastrados</h2>
+                <h2>Feriados e Dispensas Cadastradas</h2>
             </div>
             
             <table class="escala-table">
@@ -72,29 +73,31 @@
                     </tr>
                 </thead>
                 <tbody>
-                    <tr th:each="feriado : ${listaFeriados}">
-                        <td th:text="${#temporals.format(feriado.data, 'dd/MM/yyyy')}">25/12/2025</td>
-                        <td th:text="${feriado.descricao}">Natal</td>
+                    <!-- CORRIGIDO: Variável da lista agora é 'feriados' -->
+                    <tr th:each="feriadoItem : ${feriados}">
+                        <td th:text="${#temporals.format(feriadoItem.data, 'dd/MM/yyyy')}">25/12/2026</td>
+                        <td th:text="${feriadoItem.descricao}">Natal</td>
                         <td>
-                            <form th:action="@{/admin/deletar-feriado/{id}(id=${feriado.id})}" 
-                                  method="post"
-                                  onsubmit="return confirm('Tem certeza que deseja EXCLUIR este feriado?');">
-                                <button type="submit" class="btn-primary" 
-                                        style="background-color: #E74C3C; font-size: 0.8rem; padding: 0.4rem 0.8rem;">
-                                    Excluir
-                                </button>
-                            </form>
+                            <!-- CORRIGIDO: Transformado em botão de link (GET) apontando para a rota certa -->
+                            <a th:href="@{/admin/feriados/excluir/{id}(id=${feriadoItem.id})}" 
+                               onclick="return confirm('Tem certeza que deseja EXCLUIR este feriado da escala?');"
+                               class="btn-primary" 
+                               style="background-color: #E74C3C; font-size: 0.8rem; padding: 0.4rem 0.8rem; text-decoration: none; display: inline-block;">
+                                Excluir
+                            </a>
                         </td>
                     </tr>
-                    <tr th:if="${#lists.isEmpty(listaFeriados)}">
-                        <td colspan="3">Nenhum feriado cadastrado.</td>
+                    <!-- CORRIGIDO: Variável da lista -->
+                    <tr th:if="${#lists.isEmpty(feriados)}">
+                        <td colspan="3" style="text-align: center; padding: 1rem;">Nenhum feriado ou dispensa cadastrada.</td>
                     </tr>
                 </tbody>
             </table>
         </div>
         
     </div>
- <footer style="text-align: center; padding: 20px; background-color: #f1f1f1; margin-top: 50px;">
+    
+    <footer style="text-align: center; padding: 20px; background-color: #f1f1f1; margin-top: 50px;">
         <p>
             Sistema de Escala Militar &copy; 2026 <br>
             Desenvolvido com Java por <a href="https://www.linkedin.com/in/paulo-henrique-517268269" target="_blank"><strong>Cb Tomaz</strong></a>
