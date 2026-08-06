@@ -40,7 +40,18 @@ public class EscalaService {
                 .collect(Collectors.toList());
     }
 
+    // MÉTODO CORRIGIDO: Prioriza quem foi escalado manualmente para hoje
     public Militar getProximoPermanencia() {
+        LocalDate hoje = LocalDate.now();
+        List<Militar> todos = militarRepository.findAll();
+        
+        Militar trocadoParaHoje = todos.stream()
+                .filter(m -> m.getDataUltimoServico() != null && m.getDataUltimoServico().isEqual(hoje))
+                .findFirst()
+                .orElse(null);
+            
+        if (trocadoParaHoje != null) return trocadoParaHoje;
+
         List<Militar> ordenados = getMilitaresOrdenadosParaEscala(); 
         return ordenados.isEmpty() ? null : ordenados.get(0);
     }
@@ -126,10 +137,7 @@ public class EscalaService {
 
     public void salvarNovoMilitar(Militar militar) {
         militar.setAtivoNaEscala(true);
-        
-        if (militar.getDataUltimoServico() == null) {
-            militar.setDataUltimoServico(LocalDate.now());
-        }
+        if (militar.getDataUltimoServico() == null) militar.setDataUltimoServico(LocalDate.now());
 
         LocalDate hoje = LocalDate.now();
         LocalDate dataUltimoSv = militar.getDataUltimoServico();
@@ -214,31 +222,24 @@ public class EscalaService {
         if (sai == null || entra == null) return;
         
         LocalDate hoje = LocalDate.now();
-
         if (tipoTroca == null) tipoTroca = "MISSAO";
 
         switch (tipoTroca) {
             case "PAGO":
-                // Serviço Pago: O Titular que sai zera a folga e vai para o fim da fila. O substituto mantém a folga.
                 sai.setFolga(0);
                 sai.setDataUltimoServico(hoje);
                 break;
                 
             case "MISSAO":
-                // Missão: O Titular que sai preserva sua folga intacta (ex: 37 dias).
-                // O substituto (Cb Tomaz) assume o serviço de hoje, tendo sua folga zerada 
-                // e sua data ajustada para forçar o sistema a exibi-lo como Titular no Dashboard hoje!
-                entra.setFolga(0);
+                // Força o Cb Tomaz a ser exibido no Dashboard hoje sem zerar a folga dele ainda
                 entra.setDataUltimoServico(hoje);
                 break;
                 
             case "PERMUTA":
                 int folgaTemp = sai.getFolga();
                 LocalDate dataTemp = sai.getDataUltimoServico();
-                
                 sai.setFolga(entra.getFolga());
                 sai.setDataUltimoServico(entra.getDataUltimoServico());
-                
                 entra.setFolga(folgaTemp);
                 entra.setDataUltimoServico(dataTemp);
                 break;
@@ -248,13 +249,9 @@ public class EscalaService {
         militarRepository.save(entra);
     }
     
-    public List<Feriado> getTodosFeriados() {
-        return feriadoRepository.findAll();
-    }
+    public List<Feriado> getTodosFeriados() { return feriadoRepository.findAll(); }
 
-    public List<Usuario> getTodosUsuarios() {
-        return usuarioRepository.findAll();
-    }
+    public List<Usuario> getTodosUsuarios() { return usuarioRepository.findAll(); }
 
     @Transactional
     public void salvarNovoUsuario(Usuario usuario) {
@@ -266,8 +263,6 @@ public class EscalaService {
 
     @Transactional
     public void deletarUsuario(Long id) {
-        if (usuarioRepository.existsById(id)) {
-            usuarioRepository.deleteById(id);
-        }
+        if (usuarioRepository.existsById(id)) usuarioRepository.deleteById(id);
     }
 }
