@@ -10,7 +10,7 @@
 </head>
 <body style="display: flex; flex-direction: column; min-height: 100vh; margin: 0;">
 
-    <!-- Cabeçalho (Menu Completo) -->
+    <!-- Cabeçalho (Menu Completo com Feriados) -->
     <header class="header">
         <div class="logo">Permanência CSUP</div>
         <nav>
@@ -19,6 +19,7 @@
             <a th:href="@{/admin/afastar}" sec:authorize="hasRole('ADM')">Impedimentos</a>
             <a th:href="@{/admin/controle}" sec:authorize="hasRole('ADM')">Sv.Externo</a>
             <a th:href="@{/admin/troca}" sec:authorize="hasRole('ADM')">Troca de Serviço</a>
+            <a th:href="@{/admin/feriados}" sec:authorize="hasRole('ADM')">Feriados</a>
             <a th:href="@{/admin/usuarios}" sec:authorize="hasRole('ADM')">Administradores</a>
             
             <form th:action="@{/logout}" method="post" style="display: inline;">
