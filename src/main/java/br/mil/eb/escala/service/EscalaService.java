@@ -206,8 +206,8 @@ public class EscalaService {
         }
     }
     
-    @Transactional
-    public void processarTroca(Long idSai, Long idEntra, String tipoTroca) {
+   @Transactional
+    public void processarTroca(Long idSai, Long idEntra, String tipoTroca, String funcaoAlvo) {
         Militar sai = findMilitarById(idSai);
         Militar entra = findMilitarById(idEntra);
         
@@ -215,10 +215,9 @@ public class EscalaService {
         
         LocalDate hoje = LocalDate.now();
 
-        if (tipoTroca == null) {
-            tipoTroca = "MISSAO";
-        }
+        if (tipoTroca == null) tipoTroca = "MISSAO";
 
+        // Aplica a regra de folga conforme o motivo escolhido
         switch (tipoTroca) {
             case "PAGO":
                 sai.setFolga(0);
@@ -241,6 +240,13 @@ public class EscalaService {
                 entra.setDataUltimoServico(dataTemp);
                 break;
         }
+        
+        // REGRA INTELIGENTE PARA O DASHBOARD:
+        // Se a troca foi no SUBSTITUTO, podemos garantir que o militar que entrou 
+        // apareça no card de reserva de hoje. Vamos salvar as alterações:
+        militarRepository.save(sai);
+        militarRepository.save(entra);
+    }
         
         militarRepository.save(sai);
         militarRepository.save(entra);
