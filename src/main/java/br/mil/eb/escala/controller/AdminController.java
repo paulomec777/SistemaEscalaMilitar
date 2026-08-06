@@ -91,6 +91,17 @@ public class AdminController {
         escalaService.atualizarFolgaManual(id, novaFolga);
         return "redirect:/dashboard"; 
     }
+
+    @PostMapping("/atualizar-data-servico")
+    public String atualizarDataServico(@RequestParam("id") Long id, @RequestParam("novaData") String novaDataStr) {
+        try {
+            LocalDate novaData = LocalDate.parse(novaDataStr);
+            escalaService.atualizarDataUltimoServicoManual(id, novaData);
+        } catch (Exception e) {
+            System.out.println("Erro ao converter data inserida no dashboard: " + e.getMessage());
+        }
+        return "redirect:/dashboard"; // ou o mapeamento correto do seu painel principal
+    }
     
     @PostMapping("/deletar/{id}")
     public String deletarMilitar(@PathVariable("id") Long id) {
