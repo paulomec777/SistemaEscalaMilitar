@@ -206,18 +206,19 @@ public class AdminController {
             @RequestParam Long militarSaiId, 
             @RequestParam Long militarEntraId,
             @RequestParam String tipoTroca,
+            @RequestParam String funcaoAlvo, // Recebe se é TITULAR ou SUBSTITUTO
             RedirectAttributes attributes) {
         
-        // Executa a lógica inteligente de troca com base na regra selecionada
-        escalaService.processarTroca(militarSaiId, militarEntraId, tipoTroca);
+        // Executa a lógica inteligente de troca com base na regra e no posto selecionado
+        escalaService.processarTroca(militarSaiId, militarEntraId, tipoTroca, funcaoAlvo);
         
-        String mensagemRegra = "";
+        String mensagemRegra = "Troca no posto de " + funcaoAlvo + " registrada com sucesso! ";
         if ("PAGO".equals(tipoTroca)) {
-            mensagemRegra = "Troca registrada como Serviço Pago (Titular arcou com o turno).";
+            mensagemRegra += "Serviço Pago (Titular arcou com o turno).";
         } else if ("MISSAO".equals(tipoTroca)) {
-            mensagemRegra = "Troca registrada por Missão/Necessidade do Serviço.";
+            mensagemRegra += "Troca registrada por Missão/Necessidade do Serviço.";
         } else if ("PERMUTA".equals(tipoTroca)) {
-            mensagemRegra = "Troca registrada por Permuta/Acordo (Folgas invertidas).";
+            mensagemRegra += "Troca registrada por Permuta/Acordo (Folgas invertidas).";
         }
 
         attributes.addFlashAttribute("mensagem", mensagemRegra);
