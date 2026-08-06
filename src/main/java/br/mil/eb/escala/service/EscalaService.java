@@ -64,10 +64,19 @@ public class EscalaService {
     }
 
     @Transactional
-    public void atualizarFolgaManual(Long idMilitar, int novaFolga) {
+    public void atualizarDataUltimoServicoManual(Long idMilitar, LocalDate novaData) {
         Militar militar = findMilitarById(idMilitar);
         if (militar != null) {
-            militar.setFolga(novaFolga);
+            militar.setDataUltimoServico(novaData);
+            
+            // Recalcula a folga automaticamente para bater com a nova data!
+            LocalDate hoje = LocalDate.now();
+            int folgaCalculada = 0;
+            if (novaData.isBefore(hoje)) {
+                folgaCalculada = (int) java.time.temporal.ChronoUnit.DAYS.between(novaData, hoje);
+            }
+            militar.setFolga(folgaCalculada);
+            
             militarRepository.save(militar);
         }
     }
