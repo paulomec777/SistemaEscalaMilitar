@@ -8,7 +8,6 @@
     <!-- Linka o CSS principal -->
     <link rel="stylesheet" th:href="@{/css/style.css}">
 </head>
-<!-- 1. Adicionado o Flexbox no Body para ocupar 100% da altura da tela -->
 <body style="display: flex; flex-direction: column; min-height: 100vh; margin: 0;">
 
     <!-- Cabeçalho (Menu Completo) -->
@@ -30,14 +29,13 @@
         </nav>
     </header>
 
-    <!-- Conteúdo Principal -->
-    <!-- 2. Adicionado 'flex: 1' para que esta div preencha o meio da tela empurrando o rodapé -->
-    <div class="main-container" style="flex: 1;">
+    <!-- Conteúdo Principal - CENTRALIZAÇÃO TOTAL (Vertical e Horizontal) -->
+    <div class="main-container" style="flex: 1; display: flex; align-items: center; justify-content: center; padding: 20px; box-sizing: border-box;">
         
-        <!-- Cartão Centralizado -->
-        <div class="card" style="max-width: 600px; margin: 0 auto;">
-            <div class="card-header">
-                <h2>Adicionar Novo Militar</h2>
+        <!-- Cartão Proporcional -->
+        <div class="card" style="width: 100%; max-width: 500px; background-color: #fff; padding: 2rem; border-radius: 8px; box-shadow: 0 4px 10px rgba(0,0,0,0.1); box-sizing: border-box;">
+            <div class="card-header" style="text-align: center; margin-bottom: 1.5rem;">
+                <h2 style="margin: 0; color: #333;">Adicionar Novo Militar</h2>
             </div>
             
             <form th:action="@{/admin/salvar-militar}" method="post" th:object="${militar}">
@@ -47,7 +45,7 @@
                     <label for="graduacao" style="display: block; margin-bottom: 0.5rem; font-weight: 600; color: #333;">Graduação</label>
                     <input type="text" id="graduacao" th:field="*{graduacao}" 
                            placeholder="Ex: Sgt, Ten, Cap" required
-                           style="width: 100%; padding: 0.75rem; border: 1px solid #ccc; border-radius: 8px; box-sizing: border-box; font-size: 1rem;">
+                           style="width: 100%; padding: 0.75rem; border: 1px solid #ccc; border-radius: 8px; box-sizing: border-box; font-size: 1rem; transition: border-color 0.3s;">
                 </div>
                 
                 <!-- Campo Nome de Guerra -->
@@ -55,24 +53,24 @@
                     <label for="nomeGuerra" style="display: block; margin-bottom: 0.5rem; font-weight: 600; color: #333;">Nome de Guerra</label>
                     <input type="text" id="nomeGuerra" th:field="*{nomeGuerra}" 
                            placeholder="Ex: Silva, Monteiro" required
-                           style="width: 100%; padding: 0.75rem; border: 1px solid #ccc; border-radius: 8px; box-sizing: border-box; font-size: 1rem;">
+                           style="width: 100%; padding: 0.75rem; border: 1px solid #ccc; border-radius: 8px; box-sizing: border-box; font-size: 1rem; transition: border-color 0.3s;">
                 </div>
 
-                <!-- Campo Folga (NOVO) -->
+                <!-- Campo Folga -->
                 <div class="form-group" style="margin-bottom: 2rem;">
                     <label for="folga" style="display: block; margin-bottom: 0.5rem; font-weight: 600; color: #333;">Folgas Acumuladas</label>
                     <input type="number" id="folga" th:field="*{folga}" 
                            placeholder="0" value="0" required
-                           style="width: 100%; padding: 0.75rem; border: 1px solid #ccc; border-radius: 8px; box-sizing: border-box; font-size: 1rem;">
-                    <small style="color: #666;">Insira a quantidade atual de folgas do militar.</small>
+                           style="width: 100%; padding: 0.75rem; border: 1px solid #ccc; border-radius: 8px; box-sizing: border-box; font-size: 1rem; transition: border-color 0.3s;">
+                    <small style="color: #666; display: block; margin-top: 0.5rem;">Insira a quantidade atual de folgas do militar.</small>
                 </div>
                 
                 <!-- Botões -->
-                <div style="display: flex; align-items: center; justify-content: space-between;">
-                    <button type="submit" class="btn-primary" style="padding: 0.75rem 1.5rem; font-size: 1rem;">
+                <div style="display: flex; align-items: center; justify-content: space-between; margin-top: 1rem;">
+                    <button type="submit" class="btn-primary" style="padding: 0.75rem 1.5rem; font-size: 1rem; border: none; border-radius: 8px; cursor: pointer;">
                         Salvar Militar
                     </button>
-                    <a th:href="@{/dashboard}" style="color: #666; text-decoration: none; font-weight: 500; padding: 0.5rem;">
+                    <a th:href="@{/dashboard}" style="color: #666; text-decoration: none; font-weight: 500; padding: 0.5rem; transition: color 0.3s;">
                         Cancelar
                     </a>
                 </div>
@@ -82,9 +80,9 @@
         </div>
     </div>
     
-    <!-- 3. Rodapé ajustado (removido o margin-top fixo e adicionado box-sizing e width 100%) -->
+    <!-- Rodapé cravado no fundo -->
     <footer style="text-align: center; padding: 20px; background-color: #f1f1f1; width: 100%; box-sizing: border-box;">
-        <p style="margin: 0; color: #333;">
+        <p style="margin: 0; color: #333; font-size: 0.9rem;">
             Sistema de Escala Militar &copy; 2026 <br>
             Desenvolvido com Java por <a href="https://www.linkedin.com/in/paulo-henrique-517268269" target="_blank" style="color: #1a73e8; text-decoration: none;"><strong>Cb Tomaz</strong></a>
         </p>
