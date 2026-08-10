@@ -19,13 +19,13 @@ public class PageController {
         return "login";
     }
     
-    // CORREÇÃO MESTRE: Agora o método responde TANTO para a raiz "/" quanto para "/dashboard"
+    //Agora o método responde TANTO para a raiz "/" quanto para "/dashboard"
     @GetMapping({"/", "/dashboard"})
     public String getDashboardPage(Model model) {
-        // Busca a lista completa para a tabela
+        //Busca a lista completa para a tabela
         var militares = escalaService.getTodosMilitaresParaDashboard();
         
-        // Busca quem tira o serviço hoje e quem é o reserva
+        //Busca quem tira o serviço hoje e quem é o reserva
         var proximo = escalaService.getProximoPermanencia();
         var substituto = escalaService.getProximoSubstituto();
 
@@ -33,10 +33,10 @@ public class PageController {
         model.addAttribute("servicoHoje", proximo);       
         model.addAttribute("substitutoAmanha", substituto); 
         
-        // Garante segurança caso a lista venha vazia
+        //Garante segurança caso a lista venha vazia
         Long proximoId = (proximo != null) ? proximo.getId() : null;
         model.addAttribute("proximoMilitarId", proximoId);
-
-        return "dashboard"; // Renderiza a tela direto sem dar loops de redirecionamento
+        //Renderiza a tela direto sem dar loops de redirecionamento
+        return "dashboard"; 
     }
 }
