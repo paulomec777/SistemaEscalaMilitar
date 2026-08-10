@@ -19,25 +19,27 @@ public class FeriadoController {
     @Autowired
     private FeriadoRepository feriadoRepository;
 
-    // Lista todos os feriados cadastrados
+    //Lista todos os feriados cadastrados
     @GetMapping
     public String listar(Model model) {
         model.addAttribute("feriados", feriadoRepository.findAllByOrderByDataAsc());
-        model.addAttribute("feriado", new Feriado()); // Objeto para o formulário de cadastro
         
-        // CORRIGIDO: Agora aponta para o arquivo admin-feriados.html na pasta templates
+        //Objeto para o formulário de cadastro
+        model.addAttribute("feriado", new Feriado()); 
+        
+        //CORRIGIDO: Agora aponta para o arquivo admin-feriados.html na pasta templates
         return "admin-feriados"; 
     }
 
-    // Salva um novo feriado (Nacional ou do Exército)
+    //Salva um novo feriado (Nacional ou do Exército que por vez podem mudar)
     @PostMapping("/salvar")
     public String salvar(@Valid Feriado feriado, BindingResult result, RedirectAttributes attributes) {
         if (result.hasErrors()) {
-            // CORRIGIDO: Mantém o usuário na mesma tela em caso de erro de validação
+            //Mantém o usuário na mesma tela em caso de erro de validação
             return "admin-feriados"; 
         }
 
-        // Verifica se a data já está cadastrada para evitar duplicidade
+        //Verifica se a data já está cadastrada para evitar duplicidade
         if (feriadoRepository.existsByData(feriado.getData())) {
             attributes.addFlashAttribute("mensagemErro", "Este feriado já está cadastrado!");
             return "redirect:/admin/feriados";
@@ -48,7 +50,7 @@ public class FeriadoController {
         return "redirect:/admin/feriados";
     }
 
-    // Remove um feriado (caso o expediente volte ao normal)
+    //Remove um feriado (caso o expediente volte ao normal)
     @GetMapping("/excluir/{id}")
     public String excluir(@PathVariable("id") Long id, RedirectAttributes attributes) {
         feriadoRepository.deleteById(id);
