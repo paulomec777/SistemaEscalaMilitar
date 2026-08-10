@@ -37,7 +37,7 @@ public class AdminController {
     @Autowired 
     private EscalaService escalaService;
 
-    // --- DTO com motivo do tipo String (Texto Livre) ---
+    //DTO com motivo do tipo String (Texto Livre)
     @Data
     @NoArgsConstructor
     @AllArgsConstructor
@@ -61,7 +61,7 @@ public class AdminController {
         private LocalDate dataFim;
     }
 
-    // --- MILITAR ---
+    //MILITAR 
     @GetMapping("/novo-militar")
     public String getFormularioMilitar(Model model) {
         model.addAttribute("militar", new Militar());
@@ -109,7 +109,7 @@ public class AdminController {
         return "redirect:/dashboard";
     }
 
-    // --- AFASTAMENTO ---
+    //AFASTAMENTO
     @GetMapping("/afastar")
     public String getFormularioAfastar(Model model) {
         model.addAttribute("listaMilitaresAtivos", escalaService.getMilitaresAtivos());
@@ -117,7 +117,7 @@ public class AdminController {
         return "admin-afastar";
     }
     
-    // MÉTODO BLINDADO: Evita o erro 500 e joga o motivo real nos logs
+    //Evita o erro 500 e joga o motivo real nos logs
     @PostMapping("/salvar-afastamento")
     public String salvarAfastamento(
             @RequestParam(value = "militarId", required = false) Long militarId, 
@@ -154,7 +154,7 @@ public class AdminController {
         return "redirect:/admin/afastar";
     }
 
-    // --- SERVIÇO EXTERNO ---
+    //SERVIÇO EXTERNO
     @GetMapping("/controle")
     public String getControleEscala(Model model) {
         model.addAttribute("listaMilitaresAtivos", escalaService.getMilitaresAtivos());
@@ -175,7 +175,7 @@ public class AdminController {
         return "redirect:/admin/controle";
     }
 
-    // --- TROCA DE SERVIÇO (ATUALIZADO PARA AS 3 REGRAS) ---
+    //TROCA DE SERVIÇO (ATUALIZADO PARA AS 3 REGRAS)
     @GetMapping("/troca")
     public String getFormularioTroca(Model model) {
         model.addAttribute("listaMilitaresAtivos", escalaService.getMilitaresAtivos());
@@ -200,16 +200,16 @@ public class AdminController {
         }
         return "redirect:/dashboard";
     }
-
+    //Blindado contra erros caso o HTML mude
    @PostMapping("/salvar-troca")
     public String salvarTroca(
             @RequestParam Long militarSaiId, 
             @RequestParam Long militarEntraId,
             @RequestParam String tipoTroca,
-            @RequestParam(value = "funcaoAlvo", defaultValue = "TITULAR") String funcaoAlvo, // Blindado contra erros caso o HTML mude
+            @RequestParam(value = "funcaoAlvo", defaultValue = "TITULAR") String funcaoAlvo, 
             RedirectAttributes attributes) {
         
-        // Executa a lógica inteligente de troca com base na regra e no posto selecionado
+        // Executa a lógica de troca com base na regra e no posto selecionado
         escalaService.processarTroca(militarSaiId, militarEntraId, tipoTroca, funcaoAlvo);
         
         String mensagemRegra = "Troca registrada com sucesso! ";
@@ -225,7 +225,7 @@ public class AdminController {
         return "redirect:/dashboard";
     }
     
-    // --- USUÁRIOS ---
+    //USUÁRIOS
     @GetMapping("/usuarios")
     public String getFormularioUsuarios(Model model) {
         model.addAttribute("listaUsuarios", escalaService.getTodosUsuarios());
