@@ -7,6 +7,7 @@ import br.mil.eb.escala.repository.FeriadoRepository;
 import br.mil.eb.escala.repository.UsuarioRepository;
 import jakarta.annotation.PostConstruct;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
@@ -30,6 +31,10 @@ public class EscalaServicoApplication implements CommandLineRunner {
     @Autowired
     private PasswordEncoder passwordEncoder;
 
+    // Senha inicial do administrador, lida da variável de ambiente ADMIN_PASSWORD
+    @Value("${ADMIN_PASSWORD:}")
+    private String senhaInicialAdmin;
+
     public static void main(String[] args) {
         SpringApplication.run(EscalaServicoApplication.class, args);
     }
@@ -44,12 +49,14 @@ public class EscalaServicoApplication implements CommandLineRunner {
     public void run(String... args) throws Exception {
         // 1. GESTÃO DE USUÁRIO ROOT
         Optional<Usuario> admin = usuarioRepository.findByLogin("root");
-        if (admin.isEmpty()) {
+        if (admin.isEmpty() && senhaInicialAdmin.isBlank()) {
+            System.out.println("--- USUÁRIO ADM NÃO CRIADO: defina a variável ADMIN_PASSWORD ---");
+        } else if (admin.isEmpty()) {
             System.out.println("--- CRIANDO USUÁRIO ADM (root) ---");
             Usuario novoAdmin = new Usuario();
             novoAdmin.setLogin("root");
             novoAdmin.setNomeCompleto("Administrador do Sistema");
-            novoAdmin.setSenha(passwordEncoder.encode("root")); 
+            novoAdmin.setSenha(passwordEncoder.encode(senhaInicialAdmin)); 
             novoAdmin.setPerfil(Perfil.ADM); 
             novoAdmin.setEmail("admin@escala.eb.mil.br"); 
             usuarioRepository.save(novoAdmin);
