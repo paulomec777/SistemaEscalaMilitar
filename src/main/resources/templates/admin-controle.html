@@ -1,0 +1,154 @@
+<!DOCTYPE html>
+<html lang="pt-br" xmlns:th="http://www.thymeleaf.org"
+      xmlns:sec="http://www.thymeleaf.org/extras/spring-security">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Serviço Externo / Missões - CSUP</title>
+    <link rel="stylesheet" th:href="@{/css/style.css}">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <style>
+        .form-container {
+            display: flex; gap: 1rem; align-items: flex-end; flex-wrap: wrap;
+            background-color: #f8f9fa; padding: 1.5rem; border-radius: 8px; border: 1px solid #ddd;
+        }
+        .form-group { flex: 1; min-width: 200px; }
+        .form-group label { display: block; font-weight: bold; margin-bottom: 0.5rem; color: #333; }
+        .form-group input, .form-group select { 
+            width: 100%; padding: 0.6rem; border: 1px solid #ccc; border-radius: 4px; font-size: 1rem;
+        }
+        /* Estilos para os distintivos de status da missão */
+        .badge {
+            padding: 3px 8px;
+            border-radius: 12px;
+            font-size: 0.75rem;
+            font-weight: bold;
+            text-transform: uppercase;
+        }
+        .badge-futura { background-color: #F1C40F; color: #fff; }
+        .badge-andamento { background-color: #E67E22; color: #fff; }
+        .badge-descanso { background-color: #3498DB; color: #fff; }
+    </style>
+</head>
+<body>
+
+    <header class="header">
+        <div class="logo">Permanência CSUP</div>
+        <nav>
+            <a th:href="@{/dashboard}">Escala</a>
+            <span sec:authorize="hasRole('ADM')">
+                <a th:href="@{/admin/novo-militar}">Cadastrar Militar</a>
+                <a th:href="@{/admin/afastar}">Impedimentos</a>
+                <a th:href="@{/admin/controle}" style="text-decoration: underline;">Sv.Externo</a>
+                <a th:href="@{/admin/troca}">Troca de Serviço</a>
+                <a th:href="@{/admin/feriados}">Feriados</a>
+                <a th:href="@{/admin/usuarios}">Administradores</a>
+            </span>
+            <form th:action="@{/logout}" method="post" style="display: inline;">
+                <button type="submit" class="btn-primary" style="background: none; border: none; font-size: 1rem; margin-left: 1rem; cursor: pointer; color: white;">Sair</button>
+            </form>
+        </nav>
+    </header>
+
+    <div class="main-container">
+        
+        <div class="card">
+            <div class="card-header" style="border-bottom: none; padding-bottom: 0;">
+                <h2 style="color: #2C3E50;"><i class="fas fa-plane-departure"></i> Agendar Serviço Externo (Missão)</h2>
+            </div>
+            <p style="color: #666; margin-top: 0; margin-bottom: 1.5rem;">
+                O militar será <strong>bloqueado na escala</strong> durante este período. O sistema concederá automaticamente <strong>48h de descanso</strong> após a Data de Retorno.
+            </p>
+
+            <form th:action="@{/admin/agendar-externo}" th:object="${externoForm}" method="post" class="form-container">
+                
+                <div class="form-group">
+                    <label>Selecione o Militar</label>
+                    <select th:field="*{militarId}" required>
+                        <option value="">-- Escolha da Lista --</option>
+                        <option th:each="m : ${listaMilitaresAtivos}" 
+                                th:value="${m.id}" 
+                                th:text="${m.graduacao + ' ' + m.nomeGuerra}"></option>
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label>Data de Início</label>
+                    <input type="date" th:field="*{dataInicio}" required>
+                </div>
+
+                <div class="form-group">
+                    <label>Data de Retorno (Fim)</label>
+                    <input type="date" th:field="*{dataFim}" required>
+                </div>
+
+                <div>
+                    <button type="submit" class="btn-primary" style="background-color: #3498DB; border-color: #3498DB; padding: 0.7rem 1.5rem; font-size: 1rem;">
+                        <i class="fas fa-calendar-check"></i> Lançar Missão
+                    </button>
+                </div>
+            </form>
+        </div>
+
+        <div class="card" style="margin-top: 2rem;">
+            <h2>Controle de Militares em Missão</h2>
+            
+            <table class="escala-table">
+                <thead>
+                    <tr>
+                        <th style="width: 30%;">Militar</th>
+                        <th style="width: 20%; text-align: center;">Início da Missão</th>
+                        <th style="width: 20%; text-align: center;">Fim da Missão</th>
+                        <th style="width: 15%; text-align: center;">Status Atual</th>
+                        <th style="width: 15%; text-align: center;">Ações</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr th:each="militar : ${listaGeral}" th:if="${militar.dataInicioServicoExterno != null}">
+                        <td th:text="${militar.graduacao + ' ' + militar.nomeGuerra}" style="font-weight: 600;"></td>
+                        
+                        <td style="text-align: center;" th:text="${#temporals.format(militar.dataInicioServicoExterno, 'dd/MM/yyyy')}"></td>
+                        <td style="text-align: center; font-weight: bold;" th:text="${#temporals.format(militar.dataFimServicoExterno, 'dd/MM/yyyy')}"></td>
+                        
+                        <!-- REVISÃO INTELIGENTE: Status dinâmico baseado na data atual do sistema (2026) -->
+                        <td style="text-align: center;">
+                            <!-- Missão agendada para o futuro -->
+                            <span th:if="${#temporals.createNow().toLocalDate().isBefore(militar.dataInicioServicoExterno)}" class="badge badge-futura">Agendada</span>
+                            
+                            <!-- Missão acontecendo exatamente no dia de hoje -->
+                            <span th:if="${!#temporals.createNow().toLocalDate().isBefore(militar.dataInicioServicoExterno) && !#temporals.createNow().toLocalDate().isAfter(militar.dataFimServicoExterno)}" class="badge badge-andamento">Em Andamento</span>
+                            
+                            <!-- Retornou da missão e está cumprindo as 48h de descanso regulamentares -->
+                            <span th:if="${#temporals.createNow().toLocalDate().isAfter(militar.dataFimServicoExterno)}" class="badge badge-descanso" title="Período de Descanso Ativo">Pós-Missão</span>
+                        </td>
+                        
+                        <td style="text-align: center;">
+                            <form th:action="@{/admin/cancelar-externo/{id}(id=${militar.id})}" method="post" style="display: inline;">
+                                <button type="submit" class="btn-acao" 
+                                        style="background-color: #E74C3C; text-decoration: none; padding: 0.3rem 0.6rem; border: none; border-radius: 4px; color: white; cursor: pointer;"
+                                        onclick="return confirm('Tem certeza que deseja Cancelar/Remover esta missão? O militar voltará imediatamente para a escala normal.');"
+                                        title="Remover Missão">
+                                    <i class="fas fa-times"></i> Cancelar
+                                </button>
+                            </form>
+                        </td>
+                    </tr>
+                    
+                    <tr th:if="${#lists.isEmpty(listaGeral.?[dataInicioServicoExterno != null])}">
+                        <td colspan="5" style="text-align: center; padding: 2rem; color: #999;">
+                            <i class="fas fa-check-circle" style="font-size: 2rem; color: #2ECC71; margin-bottom: 10px; display: block;"></i>
+                            Nenhum militar com missão externa agendada no momento.
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+        
+    </div>
+    
+    <footer style="text-align: center; padding: 20px; background-color: #f1f1f1; margin-top: 50px;">
+        <p>Sistema de Escala Militar &copy; 2026</p>
+    </footer>
+
+</body>
+</html>

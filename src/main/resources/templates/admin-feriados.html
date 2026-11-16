@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html lang="pt-br" xmlns:th="http://www.thymeleaf.org"
+      xmlns:sec="http://www.thymeleaf.org/extras/spring-security">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin - Gerenciar Feriados</title>
+    <link rel="stylesheet" th:href="@{/css/style.css}">
+</head>
+<body style="display: flex; flex-direction: column; min-height: 100vh; margin: 0;">
+
+    <!-- Cabeçalho -->
+    <header class="header">
+        <div class="logo">Permanência CSUP</div>
+        <nav>
+            <a th:href="@{/dashboard}">Escala</a>
+            <a th:href="@{/admin/novo-militar}" sec:authorize="hasRole('ADM')">Cadastrar Militar</a>
+            <a th:href="@{/admin/afastar}" sec:authorize="hasRole('ADM')">Impedimentos</a>
+            <a th:href="@{/admin/controle}" sec:authorize="hasRole('ADM')">Sv.Externo</a>
+            <a th:href="@{/admin/troca}" sec:authorize="hasRole('ADM')">Troca de Serviço</a>
+            <a th:href="@{/admin/feriados}" sec:authorize="hasRole('ADM')">Feriados</a>
+            <a th:href="@{/admin/usuarios}" sec:authorize="hasRole('ADM')">Administradores</a>
+            
+            <form th:action="@{/logout}" method="post" style="display: inline;">
+                <button type="submit" class="btn-primary" style="background: none; border: none; font-size: 1rem; margin-left: 1rem; cursor: pointer; color: white;">
+                    Sair
+                </button>
+            </form>
+        </nav>
+    </header>
+
+    <!-- Conteúdo Principal - CENTRALIZADO e FLEXÍVEL -->
+    <div class="main-container" style="flex: 1; display: flex; flex-direction: column; align-items: center; padding: 2rem 20px; box-sizing: border-box;">
+        
+        <!-- Coluna 1: Adicionar Feriado -->
+        <div class="card" style="width: 100%; max-width: 800px; background-color: #fff; padding: 2rem; border-radius: 8px; box-shadow: 0 4px 10px rgba(0,0,0,0.1); box-sizing: border-box; margin-bottom: 2rem;">
+            <div class="card-header" style="margin-bottom: 1.5rem;">
+                <h2 style="margin: 0; color: #333;">Adicionar Novo Feriado / Dispensa</h2>
+            </div>
+            
+            <form th:action="@{/admin/feriados/salvar}" method="post" th:object="${feriado}">
+                <div style="display: grid; grid-template-columns: 1fr 1fr auto; gap: 1rem; align-items: flex-end;">
+                    <!-- Campo Descrição -->
+                    <div>
+                        <label for="descricao" style="display: block; margin-bottom: 0.5rem; font-weight: 600; color: #333;">Descrição</label>
+                        <input type="text" id="descricao" th:field="*{descricao}" placeholder="Ex: Dispensa do Gen" required
+                               style="width: 100%; padding: 0.75rem; border: 1px solid #ccc; border-radius: 8px; box-sizing: border-box; font-size: 1rem;">
+                    </div>
+                    
+                    <!-- Campo Data -->
+                    <div>
+                        <label for="data" style="display: block; margin-bottom: 0.5rem; font-weight: 600; color: #333;">Data</label>
+                        <input type="date" id="data" th:field="*{data}" required 
+                               style="width: 100%; padding: 0.75rem; border: 1px solid #ccc; border-radius: 8px; box-sizing: border-box; font-size: 1rem;">
+                    </div>
+                    
+                    <!-- Botão -->
+                    <div>
+                        <button type="submit" class="btn-primary" style="padding: 0.75rem 1.5rem; font-size: 1rem; border: none; border-radius: 8px; cursor: pointer; height: 100%;">
+                            Salvar Feriado
+                        </button>
+                    </div>
+                </div>
+            </form>
+        </div>
+        
+        <!-- Coluna 2: Feriados Cadastrados -->
+        <div class="card" style="width: 100%; max-width: 800px; background-color: #fff; padding: 2rem; border-radius: 8px; box-shadow: 0 4px 10px rgba(0,0,0,0.1); box-sizing: border-box;">
+            <div class="card-header" style="margin-bottom: 1.5rem;">
+                <h2 style="margin: 0; color: #333;">Feriados e Dispensas Cadastradas</h2>
+            </div>
+            
+            <div style="overflow-x: auto;">
+                <table class="escala-table" style="width: 100%; border-collapse: collapse; margin-top: 1rem;">
+                    <thead>
+                        <tr style="background-color: #f8f9fa; text-align: left;">
+                            <th style="padding: 1rem; border-bottom: 2px solid #dee2e6; color: #495057;">Data</th>
+                            <th style="padding: 1rem; border-bottom: 2px solid #dee2e6; color: #495057;">Descrição</th>
+                            <th sec:authorize="hasRole('ADM')" style="padding: 1rem; border-bottom: 2px solid #dee2e6; color: #495057; text-align: center;">Ação</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr th:each="feriadoItem : ${feriados}" style="border-bottom: 1px solid #eee;">
+                            <td style="padding: 1rem; color: #333;" th:text="${#temporals.format(feriadoItem.data, 'dd/MM/yyyy')}">25/12/2026</td>
+                            <td style="padding: 1rem; color: #333;" th:text="${feriadoItem.descricao}">Natal</td>
+                            <td style="padding: 1rem; text-align: center;">
+                                <a th:href="@{/admin/feriados/excluir/{id}(id=${feriadoItem.id})}" 
+                                   onclick="return confirm('Tem certeza que deseja EXCLUIR este feriado da escala?');"
+                                   class="btn-primary" 
+                                   style="background-color: #E74C3C; font-size: 0.85rem; padding: 0.5rem 1rem; text-decoration: none; display: inline-block; border-radius: 6px; font-weight: 500;">
+                                    Excluir
+                                </a>
+                            </td>
+                        </tr>
+                        <tr th:if="${#lists.isEmpty(feriados)}">
+                            <td colspan="3" style="text-align: center; padding: 2rem; color: #666; font-style: italic;">
+                                Nenhum feriado ou dispensa cadastrada no sistema.
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+        
+    </div>
+    
+    <!-- Rodapé cravado no fundo -->
+    <footer style="text-align: center; padding: 20px; background-color: #f1f1f1; width: 100%; box-sizing: border-box;">
+        <p style="margin: 0; color: #333; font-size: 0.9rem;">
+            Sistema de Escala Militar &copy; 2026 <br>
+            Desenvolvido com Java por <a href="https://www.linkedin.com/in/paulo-henrique-517268269" target="_blank" style="color: #1a73e8; text-decoration: none;"><strong>Cb Tomaz</strong></a>
+        </p>
+    </footer>
+</body>
+</html>

@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="pt-br" xmlns:th="http://www.thymeleaf.org"
+      xmlns:sec="http://www.thymeleaf.org/extras/spring-security">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin - Novo Militar</title>
+    <!-- Linka o CSS principal -->
+    <link rel="stylesheet" th:href="@{/css/style.css}">
+</head>
+<body style="display: flex; flex-direction: column; min-height: 100vh; margin: 0;">
+
+    <!-- Cabeçalho (Menu Completo com Feriados) -->
+    <header class="header">
+        <div class="logo">Permanência CSUP</div>
+        <nav>
+            <a th:href="@{/dashboard}">Escala</a>
+            <a th:href="@{/admin/novo-militar}" sec:authorize="hasRole('ADM')">Cadastrar Militar</a>
+            <a th:href="@{/admin/afastar}" sec:authorize="hasRole('ADM')">Impedimentos</a>
+            <a th:href="@{/admin/controle}" sec:authorize="hasRole('ADM')">Sv.Externo</a>
+            <a th:href="@{/admin/troca}" sec:authorize="hasRole('ADM')">Troca de Serviço</a>
+            <a th:href="@{/admin/feriados}" sec:authorize="hasRole('ADM')">Feriados</a>
+            <a th:href="@{/admin/usuarios}" sec:authorize="hasRole('ADM')">Administradores</a>
+            
+            <form th:action="@{/logout}" method="post" style="display: inline;">
+                <button type="submit" class="btn-primary" style="background: none; border: none; font-size: 1rem; margin-left: 1rem; cursor: pointer; color: white;">
+                    Sair
+                </button>
+            </form>
+        </nav>
+    </header>
+
+    <!-- Conteúdo Principal - CENTRALIZAÇÃO TOTAL (Vertical e Horizontal) -->
+    <div class="main-container" style="flex: 1; display: flex; align-items: center; justify-content: center; padding: 20px; box-sizing: border-box;">
+        
+        <!-- Cartão Proporcional -->
+        <div class="card" style="width: 100%; max-width: 500px; background-color: #fff; padding: 2rem; border-radius: 8px; box-shadow: 0 4px 10px rgba(0,0,0,0.1); box-sizing: border-box;">
+            <div class="card-header" style="text-align: center; margin-bottom: 1.5rem;">
+                <h2 style="margin: 0; color: #333;">Adicionar Novo Militar</h2>
+            </div>
+            
+            <form th:action="@{/admin/salvar-militar}" method="post" th:object="${militar}">
+                
+                <!-- Campo Graduação -->
+                <div class="form-group" style="margin-bottom: 1.5rem;">
+                    <label for="graduacao" style="display: block; margin-bottom: 0.5rem; font-weight: 600; color: #333;">Graduação</label>
+                    <input type="text" id="graduacao" th:field="*{graduacao}" 
+                           placeholder="Ex: Sgt, Ten, Cap" required
+                           style="width: 100%; padding: 0.75rem; border: 1px solid #ccc; border-radius: 8px; box-sizing: border-box; font-size: 1rem; transition: border-color 0.3s;">
+                </div>
+                
+                <!-- Campo Nome de Guerra -->
+                <div class="form-group" style="margin-bottom: 2rem;">
+                    <label for="nomeGuerra" style="display: block; margin-bottom: 0.5rem; font-weight: 600; color: #333;">Nome de Guerra</label>
+                    <input type="text" id="nomeGuerra" th:field="*{nomeGuerra}" 
+                           placeholder="Ex: Silva, Monteiro" required
+                           style="width: 100%; padding: 0.75rem; border: 1px solid #ccc; border-radius: 8px; box-sizing: border-box; font-size: 1rem; transition: border-color 0.3s;">
+                </div>
+                
+                <!-- Botões -->
+                <div style="display: flex; align-items: center; justify-content: space-between; margin-top: 1rem;">
+                    <button type="submit" class="btn-primary" style="padding: 0.75rem 1.5rem; font-size: 1rem; border: none; border-radius: 8px; cursor: pointer;">
+                        Salvar Militar
+                    </button>
+                    <a th:href="@{/dashboard}" style="color: #666; text-decoration: none; font-weight: 500; padding: 0.5rem; transition: color 0.3s;">
+                        Cancelar
+                    </a>
+                </div>
+                
+            </form>
+            
+        </div>
+    </div>
+    
+    <!-- Rodapé cravado no fundo -->
+    <footer style="text-align: center; padding: 20px; background-color: #f1f1f1; width: 100%; box-sizing: border-box;">
+        <p style="margin: 0; color: #333; font-size: 0.9rem;">
+            Sistema de Escala Militar &copy; 2026 <br>
+            Desenvolvido com Java por <a href="https://www.linkedin.com/in/paulo-henrique-517268269" target="_blank" style="color: #1a73e8; text-decoration: none;"><strong>Cb Tomaz</strong></a>
+        </p>
+    </footer>
+</body>
+</html>
