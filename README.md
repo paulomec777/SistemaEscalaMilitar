@@ -8,6 +8,10 @@ Antes, a escala ficava em planilhas espalhadas, difíceis de consultar e
 sujeitas a erro humano. Agora a informação fica em um só lugar: qualquer
 pessoa consulta o painel, e só o administrador altera a escala.
 
+**Veja funcionando:** https://escala-militar-demo.onrender.com (usuário `demo`, senha `demo`).
+A demonstração usa dados fictícios e fica em hospedagem gratuita, então a
+primeira visita pode levar cerca de um minuto para abrir.
+
 ## Funcionalidades
 
 - **Painel público** com o militar de permanência do dia, o substituto e a
