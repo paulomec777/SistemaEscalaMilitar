@@ -118,20 +118,20 @@ Nesse modo o sistema:
 - apaga e recria esses dados a cada hora, para que nada do que um visitante
   alterar fique permanente.
 
-Use sempre um banco separado para a demonstração, porque a restauração
-apaga todas as tabelas.
+O modo de demonstração usa um banco H2 em memória, então não precisa de
+PostgreSQL nem das variáveis `DB_*`, e nunca toca no banco real.
 
 ## Deploy
 
 O repositório tem um `Dockerfile`, então qualquer serviço que rode contêineres
 (Railway, Render, Fly.io) consegue publicar o projeto direto do GitHub:
 
-1. Crie um banco PostgreSQL no serviço escolhido.
-2. Crie um serviço a partir deste repositório. O `Dockerfile` é detectado
-   sozinho.
-3. Defina as variáveis `DB_URL`, `DB_USERNAME` e `DB_PASSWORD` do banco e,
-   para a demonstração, `SPRING_PROFILES_ACTIVE=demo`. A porta é lida da
-   variável `PORT`, que esses serviços já definem.
+- **Demonstração:** crie um serviço a partir deste repositório e defina
+  `SPRING_PROFILES_ACTIVE=demo`. Não precisa de banco.
+- **Uso real:** crie também um banco PostgreSQL e defina `DB_URL`,
+  `DB_USERNAME`, `DB_PASSWORD` e `ADMIN_PASSWORD`.
+
+A porta é lida da variável `PORT`, que esses serviços já definem.
 
 Cada envio para o GitHub é compilado automaticamente pelo GitHub Actions
 (`.github/workflows/build.yml`).
