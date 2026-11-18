@@ -38,11 +38,12 @@ public class EscalaService {
         LocalDate hoje = LocalDate.now();
         LocalDate ontem = hoje.minusDays(1);
         List<Militar> todos = militarRepository.findAll();
-        Set<Long> emMissao = missaoService.idsEmMissao(hoje);
+        // Missão só tira da permanência quando o ADM marcou "afastar da permanência"
+        Set<Long> afastadosPorMissao = missaoService.idsAfastadosPorMissao(hoje);
         
         return todos.stream()
                 .filter(m -> m.estaAptoParaServico(hoje))
-                .filter(m -> !emMissao.contains(m.getId()))
+                .filter(m -> !afastadosPorMissao.contains(m.getId()))
                 .filter(m -> m.getDataUltimoServico() == null || !m.getDataUltimoServico().equals(ontem)) 
                 .sorted(Comparator.comparing(Militar::getFolga).reversed()
                         .thenComparing(Militar::getDataUltimoServico, Comparator.nullsFirst(Comparator.naturalOrder())))
@@ -396,14 +397,15 @@ public class EscalaService {
                 titular = getProximoPermanencia();
                 reserva = getProximoSubstituto();
             } else {
-                Set<Long> emMissao = missoesPorDia.getOrDefault(dia, List.of()).stream()
+                Set<Long> afastadosPorMissao = missoesPorDia.getOrDefault(dia, List.of()).stream()
+                        .filter(Missao::isAfastaDaPermanencia)
                         .flatMap(mi -> mi.getMilitares().stream())
                         .map(Militar::getId)
                         .collect(Collectors.toSet());
 
                 List<Militar> candidatos = todos.stream()
                         .filter(m -> estaAptoNaData(m, dia))
-                        .filter(m -> !emMissao.contains(m.getId()))
+                        .filter(m -> !afastadosPorMissao.contains(m.getId()))
                         .filter(m -> !ontem.equals(ultimoServico.get(m.getId())))
                         .sorted(Comparator.comparing((Militar m) -> folga.get(m.getId()), Comparator.reverseOrder())
                                 .thenComparing(m -> ultimoServico.get(m.getId()),

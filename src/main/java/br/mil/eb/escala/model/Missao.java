@@ -14,7 +14,8 @@ import java.util.stream.Collectors;
 
 /**
  * Missão de um dia com um ou mais militares escalados.
- * Quem está em missão no dia não entra na permanência desse dia.
+ * Por padrão os escalados CONTINUAM na escala de permanência (a permanência tem prioridade).
+ * Se o ADM marcar "afastaDaPermanencia", eles saem da permanência daquele dia.
  * "Última hora" marca missões urgentes, que aparecem em alerta no painel.
  */
 @Entity
@@ -44,6 +45,10 @@ public class Missao {
 
     @Column(nullable = false)
     private boolean ultimaHora = false;
+
+    /** true = os escalados saem da permanência nesse dia (decisão do ADM). */
+    @Column(name = "afasta_da_permanencia", columnDefinition = "boolean default false")
+    private boolean afastaDaPermanencia = false;
 
     @ManyToMany(fetch = FetchType.EAGER)
     @JoinTable(name = "missao_militares",

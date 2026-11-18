@@ -32,6 +32,19 @@
         .chave-urgente input { width: 20px !important; height: 20px; accent-color: var(--perigo); }
         .chave-urgente:has(input:checked) { border-style: solid; border-color: var(--perigo); background: rgba(200,66,59,0.1); }
         .chave-urgente i { color: var(--perigo); }
+        .chave-afastar { border-color: rgba(45,127,184,0.45); background: rgba(45,127,184,0.05); }
+        .chave-afastar input { accent-color: var(--info); }
+        .chave-afastar i { color: var(--info) !important; }
+        .chave-afastar:has(input:checked) { border-color: var(--info); background: rgba(45,127,184,0.1); }
+        .escolha-militares .titular-hoje { margin-left: auto; font-size: 0.66rem; font-weight: 800; color: #8A6A1C;
+            background: rgba(201,165,76,0.2); padding: 0.1rem 0.4rem; border-radius: 4px; text-transform: uppercase; }
+        .situacao-escala { font-size: 0.78rem; font-weight: 600; display: inline-flex; align-items: center; gap: 0.3rem; }
+        .situacao-escala.mantem { color: #1F7A43; }
+        .situacao-escala.afasta { color: #1F6493; }
+        .acoes-missao { display: flex; flex-direction: column; gap: 0.35rem; align-items: center; }
+        .btn-alternar { display: inline-flex; align-items: center; gap: 0.35rem; padding: 0.4rem 0.7rem; border-radius: 8px;
+            border: 1px solid #C9DCEB; background: #F0F6FB; color: #1F6493; font: 600 0.78rem var(--fonte); cursor: pointer; white-space: nowrap; }
+        .btn-alternar:hover { background: #E1EEF8; }
     </style>
 </head>
 <body>
@@ -55,6 +68,14 @@
                         <input type="checkbox" name="ultimaHora" value="true">
                         <i class="fas fa-triangle-exclamation"></i>
                         <span><strong>Missão de última hora</strong> — aparece em alerta vermelho no painel e no mapa</span>
+                    </label>
+                </div>
+                <div class="inteiro">
+                    <label class="chave-urgente chave-afastar">
+                        <input type="checkbox" name="afastaDaPermanencia" value="true">
+                        <i class="fas fa-user-minus"></i>
+                        <span><strong>Afastar os escalados da permanência neste dia</strong> — sem marcar, eles continuam na escala
+                            (a permanência tem prioridade, inclusive para o mais folgado)</span>
                     </label>
                 </div>
                 <div class="inteiro">
@@ -84,10 +105,12 @@
                             <input type="checkbox" name="militaresIds" th:value="${m.id}">
                             <span th:text="${m.graduacao + ' ' + m.nomeGuerra}">Sgt Silva</span>
                             <small th:if="${m.status != 'APTO'}" th:text="${m.status}">AFASTADO</small>
+                            <span th:if="${titularHoje != null and titularHoje.id == m.id}" class="titular-hoje">Titular hoje</span>
                         </label>
                     </div>
                     <p style="margin: 0.5rem 0 0; font-size: 0.82rem; color: var(--texto-suave);">
-                        <i class="fas fa-circle-info"></i> Quem estiver em missão no dia sai da permanência daquele dia automaticamente.
+                        <i class="fas fa-circle-info"></i> Os escalados continuam na escala de permanência, a não ser que você marque
+                        "Afastar os escalados da permanência" acima. Dá para mudar depois na lista abaixo.
                     </p>
                 </div>
                 <div class="inteiro" style="display: flex; justify-content: flex-end;">
@@ -103,7 +126,7 @@
             <div class="tabela-rolagem" th:if="${!#lists.isEmpty(proximas)}">
                 <table class="escala-table">
                     <thead>
-                        <tr><th>Quando</th><th>Missão</th><th>Escalados</th><th style="text-align: center;">Ação</th></tr>
+                        <tr><th>Quando</th><th>Missão</th><th>Escalados</th><th>Permanência</th><th style="text-align: center;">Ações</th></tr>
                     </thead>
                     <tbody>
                         <tr th:each="mi : ${proximas}">
@@ -120,11 +143,24 @@
                                      style="font-size: 0.85rem; color: var(--texto-suave); white-space: pre-line;"></div>
                             </td>
                             <td th:text="${mi.nomesMilitares}">Cb Duarte</td>
-                            <td style="text-align: center;">
-                                <form th:action="@{/admin/missoes/excluir/{id}(id=${mi.id})}" method="post"
-                                      onsubmit="return confirm('Cancelar esta missão?');">
-                                    <button type="submit" class="btn-perigo-mini"><i class="fas fa-xmark"></i> Cancelar</button>
-                                </form>
+                            <td>
+                                <span th:if="${!mi.afastaDaPermanencia}" class="situacao-escala mantem"><i class="fas fa-shield-halved"></i> Continuam na escala</span>
+                                <span th:if="${mi.afastaDaPermanencia}" class="situacao-escala afasta"><i class="fas fa-user-minus"></i> Fora da permanência</span>
+                            </td>
+                            <td>
+                                <div class="acoes-missao">
+                                    <form th:action="@{/admin/missoes/permanencia/{id}(id=${mi.id})}" method="post">
+                                        <button type="submit" class="btn-alternar"
+                                                th:title="${mi.afastaDaPermanencia} ? 'Devolver os escalados à escala de permanência' : 'Tirar os escalados da permanência neste dia'">
+                                            <i class="fas" th:classappend="${mi.afastaDaPermanencia} ? 'fa-user-plus' : 'fa-user-minus'"></i>
+                                            <th:block th:text="${mi.afastaDaPermanencia} ? 'Manter na escala' : 'Afastar da permanência'">Afastar da permanência</th:block>
+                                        </button>
+                                    </form>
+                                    <form th:action="@{/admin/missoes/excluir/{id}(id=${mi.id})}" method="post"
+                                          onsubmit="return confirm('Cancelar esta missão?');">
+                                        <button type="submit" class="btn-perigo-mini"><i class="fas fa-xmark"></i> Cancelar</button>
+                                    </form>
+                                </div>
                             </td>
                         </tr>
                     </tbody>

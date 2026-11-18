@@ -44,6 +44,20 @@ public class DiaEscala {
         return data.isBefore(LocalDate.now());
     }
 
+    /** O titular do dia também está escalado numa missão (mas continua na permanência)? */
+    public boolean isTitularEmMissao() {
+        return estaEmMissao(titular);
+    }
+
+    public boolean isReservaEmMissao() {
+        return estaEmMissao(reserva);
+    }
+
+    private boolean estaEmMissao(Militar militar) {
+        return militar != null && missoes.stream()
+                .anyMatch(mi -> mi.getMilitares().stream().anyMatch(m -> m.getId().equals(militar.getId())));
+    }
+
     public boolean isTemUltimaHora() {
         return missoes.stream().anyMatch(Missao::isUltimaHora);
     }

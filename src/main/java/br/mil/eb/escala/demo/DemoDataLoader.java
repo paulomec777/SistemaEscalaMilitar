@@ -181,24 +181,27 @@ public class DemoDataLoader implements CommandLineRunner {
         LocalDate hoje = LocalDate.now();
         List<Militar> todos = militarRepository.findAll();
 
-        missao("Escolta de material", "Base de Apoio Logístico", hoje, LocalTime.of(14, 0), true,
-                "Viatura pronta às 13h30 no portão principal.", todos, "Duarte", "Ferraz");
-        missao("Guarda do paiol", "Paiol central", hoje.plusDays(1), LocalTime.of(7, 30), false,
+        // titular de hoje (Alves) numa missão: continua na permanência (padrão)
+        missao("Escolta de material", "Base de Apoio Logístico", hoje, LocalTime.of(14, 0), true, false,
+                "Viatura pronta às 13h30 no portão principal.", todos, "Alves", "Duarte", "Ferraz");
+        missao("Guarda do paiol", "Paiol central", hoje.plusDays(1), LocalTime.of(7, 30), false, false,
                 null, todos, "Cardoso");
-        missao("Apoio à formatura", "Pátio principal", hoje.plusDays(2), LocalTime.of(6, 30), false,
+        missao("Apoio à formatura", "Pátio principal", hoje.plusDays(2), LocalTime.of(6, 30), false, false,
                 "Montagem do palanque e som.", todos, "Gouveia", "Holanda", "Ivo");
-        missao("Transporte de pessoal", "Hospital Militar de Área", hoje.plusDays(3), LocalTime.of(9, 0), false,
-                null, todos, "Esteves");
+        // exemplo em que o ADM afastou o escalado da permanência
+        missao("Transporte de pessoal", "Hospital Militar de Área", hoje.plusDays(3), LocalTime.of(9, 0), false, true,
+                "Viagem o dia todo: escalado fora da permanência.", todos, "Esteves");
     }
 
     private void missao(String titulo, String local, LocalDate data, LocalTime horario, boolean ultimaHora,
-                        String descricao, List<Militar> todos, String... nomesDeGuerra) {
+                        boolean afastaDaPermanencia, String descricao, List<Militar> todos, String... nomesDeGuerra) {
         Missao mi = new Missao();
         mi.setTitulo(titulo);
         mi.setLocal(local);
         mi.setData(data);
         mi.setHorario(horario);
         mi.setUltimaHora(ultimaHora);
+        mi.setAfastaDaPermanencia(afastaDaPermanencia);
         mi.setDescricao(descricao);
         mi.setAutor(LOGIN_DEMO);
         mi.setCriadoEm(LocalDateTime.now());

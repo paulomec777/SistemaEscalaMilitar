@@ -116,6 +116,8 @@
         }
         .missao-info { color: var(--texto-suave); margin-top: 0.15rem; line-height: 1.35; }
 
+        .em-missao { margin-left: auto; color: var(--perigo); font-size: 0.8rem; }
+        .missao-fora { margin-top: 0.25rem; font-size: 0.7rem; font-weight: 700; color: #1F6493; text-transform: uppercase; letter-spacing: 0.04em; }
         .chips { display: flex; flex-wrap: wrap; gap: 0.3rem; }
         .chip {
             padding: 0.15rem 0.45rem; border-radius: 6px; font-size: 0.72rem; font-weight: 600;
@@ -165,6 +167,7 @@
             <span><i class="fas fa-square" style="color: var(--latao)"></i>T = titular da permanência</span>
             <span><i class="fas fa-square" style="color: #9CCBEA"></i>R = reserva</span>
             <span><i class="fas fa-square" style="color: var(--perigo)"></i>Missão de última hora</span>
+            <span><i class="fas fa-crosshairs" style="color: var(--perigo)"></i>Escalado também em missão (continua na permanência)</span>
             <span><i class="fas fa-circle-info"></i>Dias futuros são uma previsão e mudam com trocas e afastamentos</span>
         </div>
 
@@ -189,10 +192,12 @@
                             <div class="escalado" th:if="${dia.titular != null}">
                                 <span class="papel">T</span>
                                 <span class="nome" th:text="${dia.titular.graduacao + ' ' + dia.titular.nomeGuerra}">Sgt Alves</span>
+                                <i th:if="${dia.titularEmMissao}" class="fas fa-crosshairs em-missao" title="Também está numa missão neste dia"></i>
                             </div>
                             <div class="escalado reserva" th:if="${dia.reserva != null}">
                                 <span class="papel">R</span>
                                 <span class="nome" th:text="${dia.reserva.graduacao + ' ' + dia.reserva.nomeGuerra}">Sgt Barros</span>
+                                <i th:if="${dia.reservaEmMissao}" class="fas fa-crosshairs em-missao" title="Também está numa missão neste dia"></i>
                             </div>
                             <div class="sem-permanencia" th:if="${dia.titular == null}"
                                  th:text="${dia.passado ? 'Sem registro' : 'Ninguém disponível'}">Sem registro</div>
@@ -213,6 +218,7 @@
                                 <i class="fas fa-location-dot"></i> <th:block th:text="${mi.local}">Quartel</th:block>
                             </div>
                             <div class="missao-info"><i class="fas fa-users"></i> <th:block th:text="${mi.nomesMilitares}">Cb Duarte</th:block></div>
+                            <div class="missao-fora" th:if="${mi.afastaDaPermanencia}"><i class="fas fa-user-minus"></i> Fora da permanência</div>
                         </div>
                     </div>
 

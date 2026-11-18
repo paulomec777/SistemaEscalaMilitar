@@ -44,18 +44,23 @@ public class MissaoService {
         return missaoRepository.findTop10ByDataLessThanOrderByDataDescHorarioDesc(LocalDate.now());
     }
 
-    /** IDs dos militares que estão em alguma missão nessa data. */
-    public Set<Long> idsEmMissao(LocalDate data) {
+    /**
+     * IDs dos militares que o ADM afastou da permanência nessa data por causa de missão.
+     * Missões sem essa marcação não tiram ninguém da escala.
+     */
+    public Set<Long> idsAfastadosPorMissao(LocalDate data) {
         Set<Long> ids = new HashSet<>();
         for (Missao missao : missaoRepository.findByDataOrderByHorarioAsc(data)) {
-            missao.getMilitares().forEach(m -> ids.add(m.getId()));
+            if (missao.isAfastaDaPermanencia()) {
+                missao.getMilitares().forEach(m -> ids.add(m.getId()));
+            }
         }
         return ids;
     }
 
     @Transactional
     public Missao criar(String titulo, String descricao, String local, LocalDate data, LocalTime horario,
-                        boolean ultimaHora, List<Long> militaresIds, String autor) {
+                        boolean ultimaHora, boolean afastaDaPermanencia, List<Long> militaresIds, String autor) {
         if (titulo == null || titulo.isBlank()) {
             throw new RegraNegocioException("Informe o nome da missão.");
         }
@@ -81,10 +86,21 @@ public class MissaoService {
         missao.setData(data);
         missao.setHorario(horario);
         missao.setUltimaHora(ultimaHora);
+        missao.setAfastaDaPermanencia(afastaDaPermanencia);
         missao.setMilitares(escalados);
         missao.setAutor(autor);
         missao.setCriadoEm(LocalDateTime.now());
         return missaoRepository.save(missao);
+    }
+
+    /** Liga/desliga o afastamento da permanência numa missão já lançada. Retorna o novo valor. */
+    @Transactional
+    public boolean alternarAfastamentoDaPermanencia(Long id) {
+        Missao missao = missaoRepository.findById(id)
+                .orElseThrow(() -> new RegraNegocioException("Missão não encontrada."));
+        missao.setAfastaDaPermanencia(!missao.isAfastaDaPermanencia());
+        missaoRepository.save(missao);
+        return missao.isAfastaDaPermanencia();
     }
 
     @Transactional
