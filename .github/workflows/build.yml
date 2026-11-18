@@ -41,13 +41,16 @@ jobs:
           # Login com o token CSRF (proteção ligada)
           token() { grep -o 'name="_csrf" value="[^"]*"' "$1" | head -1 | sed 's/.*value="//;s/"$//'; }
           curl -sf -c cookies.txt -b cookies.txt http://localhost:8080/login > login.html
-          curl -s -c cookies.txt -b cookies.txt -o /dev/null -w "%{redirect_url}\n" \
+          echo "token do login: $(token login.html | cut -c1-8)..."
+          destino=$(curl -s -c cookies.txt -b cookies.txt -o /dev/null -w "%{redirect_url}" \
                --data-urlencode "username=demo" --data-urlencode "password=demo" --data-urlencode "_csrf=$(token login.html)" \
-               http://localhost:8080/login | grep -q dashboard
-          grep -q "Avisos da semana" dashboard.html
-          grep -q "Missão de última hora" dashboard.html
+               http://localhost:8080/login)
+          echo "login redirecionou para: $destino"
+          echo "$destino" | grep -q dashboard
+          grep -q "Avisos da semana" dashboard.html || { echo "Painel sem avisos"; exit 1; }
+          grep -q "Missão de última hora" dashboard.html || { echo "Painel sem alerta"; exit 1; }
           curl -sf "http://localhost:8080/mapa" > mapa.html
-          grep -q "Escolta de material" mapa.html
+          grep -q "Escolta de material" mapa.html || { echo "Mapa sem missão"; exit 1; }
           curl -sf "http://localhost:8080/mapa?semana=1" > /dev/null
           curl -sf "http://localhost:8080/mapa?semana=-1" > /dev/null
           for pagina in admin/missoes admin/avisos admin/troca admin/afastar admin/controle admin/feriados admin/usuarios admin/novo-militar; do
@@ -61,9 +64,10 @@ jobs:
           curl -sf -b cookies.txt http://localhost:8080/admin/avisos > avisos.html
           curl -sf -b cookies.txt -o /dev/null --data-urlencode "titulo=Teste CI" --data-urlencode "prioridade=URGENTE" \
                --data-urlencode "_csrf=$(token avisos.html)" http://localhost:8080/admin/avisos/salvar
-          curl -sf "http://localhost:8080/dashboard" | grep -q "Teste CI"
+          curl -sf "http://localhost:8080/dashboard" | grep -q "Teste CI" || { echo "Aviso criado não apareceu"; exit 1; }
           # Página de erro própria
-          curl -s -b cookies.txt "http://localhost:8080/nao-existe" | grep -q "Página não encontrada"
+          curl -s -b cookies.txt "http://localhost:8080/nao-existe" | grep -q "Página não encontrada" || { echo "Página de erro não apareceu"; exit 1; }
+          echo "Todas as verificações passaram"
       - name: Log da aplicação
         if: always()
         run: cat app.log || true
