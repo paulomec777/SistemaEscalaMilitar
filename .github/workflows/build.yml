@@ -51,14 +51,14 @@ jobs:
           grep -q "Missão de última hora" dashboard.html || { echo "Painel sem alerta"; exit 1; }
           curl -sf "http://localhost:8080/mapa" > mapa.html
           grep -q "Escolta de material" mapa.html || { echo "Mapa sem missão"; exit 1; }
-          if grep -q "botao-editar" mapa.html; then echo "Visitante não pode ver a edição do mapa"; exit 1; fi
+          if grep -q 'id="botao-editar"' mapa.html; then echo "Visitante não pode ver a edição do mapa"; exit 1; fi
           curl -sf "http://localhost:8080/mapa?semana=1" > /dev/null
           curl -sf "http://localhost:8080/mapa?semana=-1" > /dev/null
           for pagina in admin/missoes admin/avisos admin/troca admin/afastar admin/controle admin/feriados admin/usuarios admin/novo-militar; do
             curl -sf -b cookies.txt "http://localhost:8080/$pagina" > pagina.html || { echo "Falhou: /$pagina"; exit 1; }
             grep -q "Gestão" pagina.html || { echo "Sem menu: /$pagina"; exit 1; }
           done
-          curl -sf -b cookies.txt "http://localhost:8080/mapa" | grep -q "botao-editar" || { echo "ADM sem botão de edição no mapa"; exit 1; }
+          curl -sf -b cookies.txt "http://localhost:8080/mapa" | grep -q 'id="botao-editar"' || { echo "ADM sem botão de edição no mapa"; exit 1; }
           # POST sem token CSRF tem que ser recusado
           codigo=$(curl -s -b cookies.txt -o /dev/null -w "%{http_code}" -d "titulo=Ataque" http://localhost:8080/admin/avisos/salvar)
           [ "$codigo" = "403" ] || { echo "POST sem CSRF deveria dar 403, deu $codigo"; exit 1; }
