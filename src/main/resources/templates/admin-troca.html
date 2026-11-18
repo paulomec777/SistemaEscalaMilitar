@@ -25,6 +25,8 @@
         .troca-tipo strong { display: block; font-size: 1rem; }
         .troca-tipo small { display: block; font-size: 0.86rem; color: var(--texto-suave); line-height: 1.45; margin-top: 0.15rem; font-weight: 400; }
         .troca-nota { font-size: 0.85rem; color: var(--texto-suave); margin: 0 0 1.25rem; }
+        .aviso-troca-ativa { display: flex; gap: 0.6rem; align-items: flex-start; padding: 0.85rem 1rem; margin-bottom: 1.25rem;
+            border-radius: 10px; background: #F0F6FB; border: 1px solid #C9DCEB; color: #1F4E70; font-size: 0.92rem; line-height: 1.45; }
     </style>
 </head>
 <body>
@@ -46,13 +48,21 @@
                 <i class="fas fa-ban"></i> <span th:text="${motivoBloqueio}">Hoje não tem permanência.</span>
             </div>
 
+            <div th:if="${motivoBloqueio == null and !#lists.isEmpty(trocasHoje)}" class="aviso-troca-ativa">
+                <i class="fas fa-circle-info"></i>
+                <span>Hoje já houve troca: no serviço agora está
+                    <strong th:text="${noServicoAgora.graduacao + ' ' + noServicoAgora.nomeGuerra}">Cb Duarte</strong>.
+                    Uma nova troca <strong>desfaz a anterior</strong> (todos voltam como estavam) e é feita a partir do titular original.
+                </span>
+            </div>
+
             <form th:if="${motivoBloqueio == null}" th:action="@{/admin/salvar-troca}" method="post">
                 <!-- Quem sai é sempre o titular de hoje -->
                 <input type="hidden" name="militarSaiId" th:value="${titularHoje.id}">
 
                 <div class="troca-lados">
                     <div class="troca-lado sai">
-                        <span class="troca-rotulo"><i class="fas fa-arrow-right-from-bracket"></i> Sai do serviço (titular de hoje)</span>
+                        <span class="troca-rotulo"><i class="fas fa-arrow-right-from-bracket"></i> Sai do serviço (escalado pelo sistema)</span>
                         <strong th:text="${titularHoje.graduacao + ' ' + titularHoje.nomeGuerra}">3º Sgt Alves</strong>
                         <small th:text="${'Folga atual: ' + titularHoje.folga}">Folga atual: 9</small>
                     </div>
@@ -87,11 +97,45 @@
                 <div style="display: flex; justify-content: flex-end; gap: 1rem; align-items: center; border-top: 1px solid var(--borda); padding-top: 1.25rem;">
                     <a th:href="@{/dashboard}" style="color: var(--texto-suave); text-decoration: none; font-weight: 500;">Cancelar</a>
                     <button type="submit" class="btn-primary"
-                            onclick="return confirm('Confirmar a troca do serviço de hoje? Só é possível uma troca por dia.');">
+                            onclick="return confirm('Confirmar a troca do serviço de hoje?');">
                         <i class="fas fa-check"></i> Confirmar troca
                     </button>
                 </div>
             </form>
+        </div>
+
+        <div class="card" style="max-width: 860px; margin: 1.75rem auto 0;" th:if="${!#lists.isEmpty(historico)}">
+            <div class="card-header">
+                <h2><i class="fas fa-clock-rotate-left"></i> Histórico de trocas</h2>
+                <span style="font-size: 0.85rem; color: var(--texto-suave);"><i class="fas fa-lock"></i> visível só para o ADM</span>
+            </div>
+            <div class="tabela-rolagem">
+                <table class="escala-table">
+                    <thead>
+                        <tr><th>Data</th><th>Tipo</th><th>Saiu</th><th>Entrou</th><th>Por</th><th style="text-align: center;">Situação</th></tr>
+                    </thead>
+                    <tbody>
+                        <tr th:each="t : ${historico}" th:style="${t.desfeita} ? 'opacity: 0.55;'">
+                            <td style="white-space: nowrap;">
+                                <span th:text="${#temporals.format(t.data, 'dd/MM/yyyy')}">17/11/2026</span>
+                                <div th:if="${t.criadoEm != null}" th:text="${#temporals.format(t.criadoEm, 'HH:mm')}" style="font-size: 0.8rem; color: var(--texto-suave);">14:20</div>
+                            </td>
+                            <td th:text="${t.tipo.rotulo}">Missão</td>
+                            <td th:text="${t.sai.graduacao + ' ' + t.sai.nomeGuerra}">Sgt Alves</td>
+                            <td th:text="${t.entra.graduacao + ' ' + t.entra.nomeGuerra}">Cb Duarte</td>
+                            <td th:text="${t.autor}">root</td>
+                            <td style="text-align: center;">
+                                <form th:if="${t.podeDesfazer}" th:action="@{/admin/desfazer-troca/{id}(id=${t.id})}" method="post" style="margin: 0;"
+                                      onsubmit="return confirm('Desfazer esta troca? Os dois militares voltam exatamente como estavam antes dela.');">
+                                    <button type="submit" class="btn-perigo-mini"><i class="fas fa-rotate-left"></i> Desfazer</button>
+                                </form>
+                                <span th:if="${t.desfeita}" class="badge" style="background:#EEE;color:#777;">Desfeita</span>
+                                <span th:if="${!t.desfeita and !t.podeDesfazer}" class="badge badge-apto">Cumprida</span>
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
         </div>
     </div>
 

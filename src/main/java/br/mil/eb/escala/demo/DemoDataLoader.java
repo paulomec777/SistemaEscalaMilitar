@@ -11,6 +11,7 @@ import br.mil.eb.escala.repository.AvisoRepository;
 import br.mil.eb.escala.repository.FeriadoRepository;
 import br.mil.eb.escala.repository.MilitarRepository;
 import br.mil.eb.escala.repository.MissaoRepository;
+import br.mil.eb.escala.repository.TrocaRepository;
 import br.mil.eb.escala.repository.UsuarioRepository;
 import jakarta.transaction.Transactional;
 import org.springframework.boot.CommandLineRunner;
@@ -48,19 +49,22 @@ public class DemoDataLoader implements CommandLineRunner {
     private final PasswordEncoder passwordEncoder;
     private final AvisoRepository avisoRepository;
     private final MissaoRepository missaoRepository;
+    private final TrocaRepository trocaRepository;
 
     public DemoDataLoader(MilitarRepository militarRepository,
                           FeriadoRepository feriadoRepository,
                           UsuarioRepository usuarioRepository,
                           PasswordEncoder passwordEncoder,
                           AvisoRepository avisoRepository,
-                          MissaoRepository missaoRepository) {
+                          MissaoRepository missaoRepository,
+                          TrocaRepository trocaRepository) {
         this.militarRepository = militarRepository;
         this.feriadoRepository = feriadoRepository;
         this.usuarioRepository = usuarioRepository;
         this.passwordEncoder = passwordEncoder;
         this.avisoRepository = avisoRepository;
         this.missaoRepository = missaoRepository;
+        this.trocaRepository = trocaRepository;
     }
 
     @Override
@@ -77,6 +81,7 @@ public class DemoDataLoader implements CommandLineRunner {
         // com o antigo ainda não apagado ("Unique index" no e-mail) na virada de hora.
         missaoRepository.deleteAll();   // apaga também a tabela de ligação com os militares
         missaoRepository.flush();
+        trocaRepository.deleteAllInBatch();   // antes dos militares (referência)
         avisoRepository.deleteAllInBatch();
         militarRepository.deleteAllInBatch();
         feriadoRepository.deleteAllInBatch();

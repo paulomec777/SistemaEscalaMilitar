@@ -7,9 +7,11 @@ import br.mil.eb.escala.model.Militar;
 import br.mil.eb.escala.model.Missao;
 import br.mil.eb.escala.model.Perfil;
 import br.mil.eb.escala.model.TipoTroca;
+import br.mil.eb.escala.model.Troca;
 import br.mil.eb.escala.model.Usuario;
 import br.mil.eb.escala.repository.FeriadoRepository;
 import br.mil.eb.escala.repository.MilitarRepository;
+import br.mil.eb.escala.repository.TrocaRepository;
 import br.mil.eb.escala.repository.UsuarioRepository;
 import jakarta.transaction.Transactional;
 import org.slf4j.Logger;
@@ -21,6 +23,7 @@ import org.springframework.stereotype.Service;
 
 import java.time.DayOfWeek;
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
 import java.util.Comparator;
@@ -40,6 +43,7 @@ public class EscalaService {
     @Autowired private UsuarioRepository usuarioRepository;
     @Autowired private PasswordEncoder passwordEncoder;
     @Autowired private MissaoService missaoService;
+    @Autowired private TrocaRepository trocaRepository;
 
     public List<Militar> getMilitaresOrdenadosParaEscala() {
         LocalDate hoje = LocalDate.now();
@@ -244,6 +248,7 @@ public class EscalaService {
     public void deletarMilitar(Long id) {
         if (militarRepository.existsById(id)) {
             missaoService.removerMilitarDasMissoes(id);
+            trocaRepository.deleteAll(trocaRepository.findBySaiIdOrEntraId(id, id));
             militarRepository.deleteById(id);
         }
     }
@@ -307,39 +312,65 @@ public class EscalaService {
         }
     }
     
+    /** Trocas valendo hoje (a mais recente primeiro). */
+    public List<Troca> getTrocasDeHoje() {
+        return trocaRepository.findByDataAndDesfeitaFalseOrderByCriadoEmDesc(LocalDate.now());
+    }
+
+    public List<Troca> getHistoricoDeTrocas() {
+        return trocaRepository.findTop20ByOrderByCriadoEmDesc();
+    }
+
     /**
-     * Motivo pelo qual a troca de hoje NÃO pode ser feita, ou null se pode.
+     * Quem a escala tinha colocado hoje antes de qualquer troca.
+     * É sempre ele quem "sai" numa troca nova (a troca anterior do dia é desfeita antes).
+     */
+    public Militar getTitularOriginalDeHoje() {
+        List<Troca> trocas = getTrocasDeHoje();
+        if (!trocas.isEmpty()) return trocas.get(trocas.size() - 1).getSai(); // a primeira do dia
+        return getProximoPermanencia();
+    }
+
+    /**
+     * Motivo pelo qual NÃO dá para trocar hoje, ou null se pode.
      * (A tela usa isso para avisar o ADM antes de ele preencher o formulário.)
      */
     public String motivoParaNaoTrocarHoje() {
         LocalDate hoje = LocalDate.now();
         if (!isDiaUtil(hoje)) return "Hoje não tem permanência (fim de semana ou feriado).";
-        Militar titular = getProximoPermanencia();
+        Militar titular = getTitularOriginalDeHoje();
         if (titular == null) return "Não há titular escalado hoje.";
-        if (hoje.equals(titular.getDataUltimoServico())) {
-            return "A permanência de hoje já foi alterada (" + titular.getGraduacao() + " " + titular.getNomeGuerra()
-                    + " está registrado no serviço). Só é possível uma troca por dia.";
+        if (getTrocasDeHoje().isEmpty() && hoje.equals(titular.getDataUltimoServico())) {
+            return "O serviço de hoje foi registrado manualmente para " + titular.getGraduacao() + " "
+                    + titular.getNomeGuerra() + " (pela data do último serviço). Corrija a data dele no painel antes de trocar.";
         }
         return null;
     }
 
     /**
-     * Troca do titular de HOJE. Regras em {@link TipoTroca}.
-     * Quem sai é sempre o titular atual; o id vindo da tela só confere se a página não estava desatualizada.
+     * Troca do serviço de HOJE. Regras de cada tipo em {@link TipoTroca}.
+     * O ADM pode trocar quantas vezes precisar: se já houver troca hoje, ela é desfeita
+     * primeiro (todo mundo volta como estava) e a nova é feita a partir do titular original.
      */
     @Transactional
-    public void processarTroca(Long idSai, Long idEntra, TipoTroca tipo) {
+    public Troca processarTroca(Long idSai, Long idEntra, TipoTroca tipo, String autor) {
         String impedimento = motivoParaNaoTrocarHoje();
         if (impedimento != null) throw new RegraNegocioException(impedimento);
         if (tipo == null) throw new RegraNegocioException("Escolha o tipo da troca.");
 
         LocalDate hoje = LocalDate.now();
-        Militar sai = getProximoPermanencia();
-        Militar entra = findMilitarById(idEntra);
-
-        if (idSai == null || !idSai.equals(sai.getId())) {
-            throw new RegraNegocioException("O titular de hoje mudou enquanto a tela estava aberta. Confira e tente de novo.");
+        Militar titularOriginal = getTitularOriginalDeHoje();
+        if (idSai == null || !idSai.equals(titularOriginal.getId())) {
+            throw new RegraNegocioException("A escala de hoje mudou enquanto a tela estava aberta. Confira e tente de novo.");
         }
+
+        // Desfaz a(s) troca(s) anterior(es) de hoje: quem tinha entrado volta como estava
+        for (Troca anterior : getTrocasDeHoje()) {
+            restaurar(anterior);
+        }
+
+        Militar sai = findMilitarById(titularOriginal.getId());
+        Militar entra = findMilitarById(idEntra);
         if (entra == null) throw new RegraNegocioException("Selecione quem vai entrar no serviço.");
         if (entra.getId().equals(sai.getId())) throw new RegraNegocioException("Quem entra precisa ser outro militar.");
         if (!entra.estaAptoParaServico(hoje) || missaoService.idsAfastadosPorMissao(hoje).contains(entra.getId())) {
@@ -348,6 +379,21 @@ public class EscalaService {
         if (hoje.minusDays(1).equals(entra.getDataUltimoServico())) {
             throw new RegraNegocioException(entra.getNomeGuerra() + " saiu de serviço ontem e não pode entrar hoje.");
         }
+
+        // Guarda como os dois estavam, para poder desfazer depois
+        Troca troca = new Troca();
+        troca.setData(hoje);
+        troca.setTipo(tipo);
+        troca.setSai(sai);
+        troca.setEntra(entra);
+        troca.setSaiFolgaAntes(sai.getFolga());
+        troca.setSaiDataUltimoServicoAntes(sai.getDataUltimoServico());
+        troca.setSaiPagouServicoAntes(sai.isPagouServico());
+        troca.setEntraFolgaAntes(entra.getFolga());
+        troca.setEntraDataUltimoServicoAntes(entra.getDataUltimoServico());
+        troca.setEntraServicoPagoAntes(entra.isServicoPagoTemporario());
+        troca.setAutor(autor);
+        troca.setCriadoEm(LocalDateTime.now());
 
         switch (tipo) {
             case MISSAO:
@@ -359,26 +405,61 @@ public class EscalaService {
                 // Quem entra tira hoje, mas o escudo impede a folga dele de zerar à meia-noite...
                 entra.setDataUltimoServico(hoje);
                 entra.setServicoPagoTemporario(true);
-                // ...e quem sai zera à meia-noite como se tivesse tirado (antes zerava na hora e ficava com 1)
+                // ...e quem sai zera à meia-noite como se tivesse tirado
                 sai.setPagouServico(true);
                 break;
 
             case PERMUTA:
                 // Trocam de lugar na fila: quem sai herda a folga e a data de quem entrou
                 // (e por isso fica devendo o próximo serviço dele)...
-                int folgaSai = sai.getFolga();
-                sai.setFolga(entra.getFolga());
-                sai.setDataUltimoServico(entra.getDataUltimoServico());
+                sai.setFolga(troca.getEntraFolgaAntes());
+                sai.setDataUltimoServico(troca.getEntraDataUltimoServicoAntes());
                 // ...e quem entra assume a posição de quem saiu e tira o serviço de hoje
-                entra.setFolga(folgaSai);
+                entra.setFolga(troca.getSaiFolgaAntes());
                 entra.setDataUltimoServico(hoje);
                 break;
         }
 
         militarRepository.save(sai);
         militarRepository.save(entra);
-        log.info("Troca {} em {}: sai {} {}, entra {} {}", tipo, hoje,
-                sai.getGraduacao(), sai.getNomeGuerra(), entra.getGraduacao(), entra.getNomeGuerra());
+        trocaRepository.save(troca);
+        log.info("Troca {} em {}: sai {} {}, entra {} {} (por {})", tipo, hoje,
+                sai.getGraduacao(), sai.getNomeGuerra(), entra.getGraduacao(), entra.getNomeGuerra(), autor);
+        return troca;
+    }
+
+    /** Desfaz uma troca de hoje: os dois militares voltam exatamente como estavam. */
+    @Transactional
+    public void desfazerTroca(Long idTroca) {
+        Troca troca = trocaRepository.findById(idTroca)
+                .orElseThrow(() -> new RegraNegocioException("Troca não encontrada."));
+        if (!troca.isPodeDesfazer()) {
+            throw new RegraNegocioException("Só dá para desfazer trocas de hoje que ainda estão valendo.");
+        }
+        // Se houver troca mais recente hoje, desfaz ela antes (ordem inversa)
+        for (Troca t : getTrocasDeHoje()) {
+            restaurar(t);
+            if (t.getId().equals(troca.getId())) break;
+        }
+    }
+
+    private void restaurar(Troca troca) {
+        Militar sai = findMilitarById(troca.getSai().getId());
+        Militar entra = findMilitarById(troca.getEntra().getId());
+        if (sai != null) {
+            sai.setFolga(troca.getSaiFolgaAntes());
+            sai.setDataUltimoServico(troca.getSaiDataUltimoServicoAntes());
+            sai.setPagouServico(troca.isSaiPagouServicoAntes());
+            militarRepository.save(sai);
+        }
+        if (entra != null) {
+            entra.setFolga(troca.getEntraFolgaAntes());
+            entra.setDataUltimoServico(troca.getEntraDataUltimoServicoAntes());
+            entra.setServicoPagoTemporario(troca.isEntraServicoPagoAntes());
+            militarRepository.save(entra);
+        }
+        troca.setDesfeita(true);
+        trocaRepository.save(troca);
     }
     
     public List<Feriado> getTodosFeriados() { return feriadoRepository.findAll(); }

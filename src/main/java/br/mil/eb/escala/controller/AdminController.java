@@ -182,29 +182,31 @@ public class AdminController {
     //TROCA DE SERVIÇO (ATUALIZADO PARA AS 3 REGRAS)
     @GetMapping("/troca")
     public String getFormularioTroca(Model model) {
-        Militar titular = escalaService.getProximoPermanencia();
-        LocalDate hoje = LocalDate.now();
-        model.addAttribute("titularHoje", titular);
+        Militar titularOriginal = escalaService.getTitularOriginalDeHoje();
+        model.addAttribute("titularHoje", titularOriginal);
+        model.addAttribute("noServicoAgora", escalaService.getProximoPermanencia());
         model.addAttribute("motivoBloqueio", escalaService.motivoParaNaoTrocarHoje());
         model.addAttribute("tiposTroca", TipoTroca.values());
-        // Só aparece para entrar quem pode tirar o serviço hoje
+        model.addAttribute("trocasHoje", escalaService.getTrocasDeHoje());
+        model.addAttribute("historico", escalaService.getHistoricoDeTrocas());
+        // Só aparece para entrar quem pode tirar o serviço hoje (fora o titular original)
         model.addAttribute("listaMilitaresAtivos", escalaService.getMilitaresOrdenadosParaEscala().stream()
-                .filter(m -> titular == null || !m.getId().equals(titular.getId()))
+                .filter(m -> titularOriginal == null || !m.getId().equals(titularOriginal.getId()))
                 .toList());
-        model.addAttribute("hoje", hoje);
+        model.addAttribute("hoje", LocalDate.now());
         return "admin-troca";
     }
 
-    //Blindado contra erros caso o HTML mude
     @PostMapping("/salvar-troca")
     public String salvarTroca(
             @RequestParam(value = "militarSaiId", required = false) Long militarSaiId,
             @RequestParam(value = "militarEntraId", required = false) Long militarEntraId,
             @RequestParam(value = "tipoTroca", required = false) TipoTroca tipoTroca,
+            Principal principal,
             RedirectAttributes attributes) {
         
         try {
-            escalaService.processarTroca(militarSaiId, militarEntraId, tipoTroca);
+            escalaService.processarTroca(militarSaiId, militarEntraId, tipoTroca, principal.getName());
         } catch (RegraNegocioException e) {
             attributes.addFlashAttribute("erro", e.getMessage());
             return "redirect:/admin/troca";
@@ -212,7 +214,18 @@ public class AdminController {
 
         // Mensagem só para o ADM que fez a troca (o painel público não mostra trocas)
         attributes.addFlashAttribute("mensagem", "Troca registrada: " + tipoTroca.getRotulo() + ". " + tipoTroca.getExplicacao());
-        return "redirect:/dashboard";
+        return "redirect:/admin/troca";
+    }
+
+    @PostMapping("/desfazer-troca/{id}")
+    public String desfazerTroca(@PathVariable("id") Long id, RedirectAttributes attributes) {
+        try {
+            escalaService.desfazerTroca(id);
+            attributes.addFlashAttribute("mensagem", "Troca desfeita: os militares voltaram como estavam antes dela.");
+        } catch (RegraNegocioException e) {
+            attributes.addFlashAttribute("erro", e.getMessage());
+        }
+        return "redirect:/admin/troca";
     }
     
     //USUÁRIOS

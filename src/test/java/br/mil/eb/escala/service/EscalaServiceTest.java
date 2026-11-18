@@ -5,9 +5,11 @@ import br.mil.eb.escala.exception.RegraNegocioException;
 import br.mil.eb.escala.model.Militar;
 import br.mil.eb.escala.model.Perfil;
 import br.mil.eb.escala.model.TipoTroca;
+import br.mil.eb.escala.model.Troca;
 import br.mil.eb.escala.model.Usuario;
 import br.mil.eb.escala.repository.FeriadoRepository;
 import br.mil.eb.escala.repository.MilitarRepository;
+import br.mil.eb.escala.repository.TrocaRepository;
 import br.mil.eb.escala.repository.UsuarioRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -41,11 +43,13 @@ class EscalaServiceTest {
     @Mock private UsuarioRepository usuarioRepository;
     @Mock private PasswordEncoder passwordEncoder;
     @Mock private MissaoService missaoService;
+    @Mock private TrocaRepository trocaRepository;
 
     @InjectMocks private EscalaService escalaService;
 
     private final LocalDate hoje = LocalDate.now();
     private final List<Militar> militares = new ArrayList<>();
+    private final List<Troca> trocas = new ArrayList<>(); // "banco" das trocas
 
     @BeforeEach
     void preparar() {
@@ -54,6 +58,22 @@ class EscalaServiceTest {
         when(missaoService.missoesDoPeriodo(any(), any())).thenReturn(List.of());
         when(feriadoRepository.existsByData(any())).thenReturn(false);
         when(feriadoRepository.findAll()).thenReturn(List.of());
+
+        // Repositório de trocas simulado em memória
+        when(trocaRepository.save(any())).thenAnswer(inv -> {
+            Troca t = inv.getArgument(0);
+            if (t.getId() == null) t.setId((long) trocas.size() + 1);
+            if (!trocas.contains(t)) trocas.add(t);
+            return t;
+        });
+        when(trocaRepository.findByDataAndDesfeitaFalseOrderByCriadoEmDesc(any())).thenAnswer(inv -> {
+            List<Troca> lista = new ArrayList<>(trocas.stream()
+                    .filter(t -> !t.isDesfeita() && t.getData().equals(inv.getArgument(0))).toList());
+            java.util.Collections.reverse(lista); // mais recente primeiro
+            return lista;
+        });
+        when(trocaRepository.findById(any())).thenAnswer(inv ->
+                trocas.stream().filter(t -> t.getId().equals(inv.getArgument(0))).findFirst());
     }
 
     private Militar militar(long id, String nome, int folga, LocalDate ultimoServico) {
@@ -265,7 +285,7 @@ class EscalaServiceTest {
         Militar alves = comBusca(militar(1, "Alves", 9, hoje.minusDays(9)));
         Militar barros = comBusca(militar(2, "Barros", 5, hoje.minusDays(5)));
 
-        escalaService.processarTroca(1L, 2L, TipoTroca.MISSAO);
+        escalaService.processarTroca(1L, 2L, TipoTroca.MISSAO, "adm");
 
         assertEquals(barros, escalaService.getProximoPermanencia());
         assertEquals(hoje, barros.getDataUltimoServico());
@@ -280,7 +300,7 @@ class EscalaServiceTest {
         Militar alves = comBusca(militar(1, "Alves", 9, hoje.minusDays(9)));
         Militar barros = comBusca(militar(2, "Barros", 5, hoje.minusDays(5)));
 
-        escalaService.processarTroca(1L, 2L, TipoTroca.PAGO);
+        escalaService.processarTroca(1L, 2L, TipoTroca.PAGO, "adm");
 
         assertEquals(barros, escalaService.getProximoPermanencia());
         assertTrue(barros.isServicoPagoTemporario());     // escudo: não zera à meia-noite
@@ -294,7 +314,7 @@ class EscalaServiceTest {
         Militar alves = comBusca(militar(1, "Alves", 9, hoje.minusDays(9)));
         Militar barros = comBusca(militar(2, "Barros", 5, hoje.minusDays(5)));
 
-        escalaService.processarTroca(1L, 2L, TipoTroca.PERMUTA);
+        escalaService.processarTroca(1L, 2L, TipoTroca.PERMUTA, "adm");
 
         assertEquals(barros, escalaService.getProximoPermanencia());
         assertEquals(hoje, barros.getDataUltimoServico());
@@ -304,16 +324,40 @@ class EscalaServiceTest {
     }
 
     @Test
-    void soUmaTrocaPorDia() {
+    void novaTrocaNoMesmoDiaDesfazAAnteriorEPartedoTitularOriginal() {
         assumeTrue(hojeEhDiaUtil());
-        comBusca(militar(1, "Alves", 9, hoje.minusDays(9)));
-        comBusca(militar(2, "Barros", 5, hoje.minusDays(5)));
-        comBusca(militar(3, "Cardoso", 3, hoje.minusDays(3)));
+        Militar alves = comBusca(militar(1, "Alves", 9, hoje.minusDays(9)));
+        Militar barros = comBusca(militar(2, "Barros", 5, hoje.minusDays(5)));
+        Militar cardoso = comBusca(militar(3, "Cardoso", 3, hoje.minusDays(3)));
 
-        escalaService.processarTroca(1L, 2L, TipoTroca.MISSAO);
+        escalaService.processarTroca(1L, 2L, TipoTroca.PERMUTA, "adm");
+        // Barros teve um imprevisto: nova troca, agora o Cardoso entra (sai continua sendo o Alves)
+        escalaService.processarTroca(1L, 3L, TipoTroca.PAGO, "adm");
 
-        assertNotNull(escalaService.motivoParaNaoTrocarHoje());
-        assertThrows(RegraNegocioException.class, () -> escalaService.processarTroca(2L, 3L, TipoTroca.MISSAO));
+        assertEquals(cardoso, escalaService.getProximoPermanencia());
+        assertEquals(5, barros.getFolga());                       // Barros voltou exatamente como estava
+        assertEquals(hoje.minusDays(5), barros.getDataUltimoServico());
+        assertEquals(9, alves.getFolga());                        // a permuta foi desfeita
+        assertTrue(alves.isPagouServico());                       // e vale o serviço pago
+        assertEquals(1, escalaService.getTrocasDeHoje().size());
+        assertEquals(alves, escalaService.getTitularOriginalDeHoje());
+    }
+
+    @Test
+    void desfazerTrocaVoltaTodoMundoComoEstava() {
+        assumeTrue(hojeEhDiaUtil());
+        Militar alves = comBusca(militar(1, "Alves", 9, hoje.minusDays(9)));
+        Militar barros = comBusca(militar(2, "Barros", 5, hoje.minusDays(5)));
+
+        Troca troca = escalaService.processarTroca(1L, 2L, TipoTroca.PERMUTA, "adm");
+        escalaService.desfazerTroca(troca.getId());
+
+        assertEquals(9, alves.getFolga());
+        assertEquals(hoje.minusDays(9), alves.getDataUltimoServico());
+        assertEquals(5, barros.getFolga());
+        assertEquals(hoje.minusDays(5), barros.getDataUltimoServico());
+        assertEquals(alves, escalaService.getProximoPermanencia());
+        assertTrue(troca.isDesfeita());
     }
 
     @Test
@@ -322,7 +366,7 @@ class EscalaServiceTest {
         comBusca(militar(1, "Alves", 9, hoje.minusDays(9)));
         comBusca(militar(2, "Barros", 0, hoje.minusDays(1)));
 
-        assertThrows(RegraNegocioException.class, () -> escalaService.processarTroca(1L, 2L, TipoTroca.MISSAO));
+        assertThrows(RegraNegocioException.class, () -> escalaService.processarTroca(1L, 2L, TipoTroca.MISSAO, "adm"));
     }
 
     @Test
@@ -333,7 +377,7 @@ class EscalaServiceTest {
         comBusca(militar(3, "Cardoso", 3, hoje.minusDays(3)));
 
         // a tela dizia que o titular era o Barros, mas é o Alves
-        assertThrows(RegraNegocioException.class, () -> escalaService.processarTroca(2L, 3L, TipoTroca.MISSAO));
+        assertThrows(RegraNegocioException.class, () -> escalaService.processarTroca(2L, 3L, TipoTroca.MISSAO, "adm"));
     }
 
     @Test
