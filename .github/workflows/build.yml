@@ -66,7 +66,8 @@ jobs:
                --data-urlencode "_csrf=$(token avisos.html)" http://localhost:8080/admin/avisos/salvar
           curl -sf "http://localhost:8080/dashboard" | grep -q "Teste CI" || { echo "Aviso criado não apareceu"; exit 1; }
           # Página de erro própria
-          curl -s -b cookies.txt "http://localhost:8080/nao-existe" | grep -q "Página não encontrada" || { echo "Página de erro não apareceu"; exit 1; }
+          curl -s -b cookies.txt -o erro.html -w "status da página inexistente: %{http_code}\n" "http://localhost:8080/nao-existe"
+          grep -q "Página não encontrada" erro.html || { echo "Página de erro não apareceu:"; head -c 600 erro.html; exit 1; }
           echo "Todas as verificações passaram"
       - name: Log da aplicação
         if: always()
