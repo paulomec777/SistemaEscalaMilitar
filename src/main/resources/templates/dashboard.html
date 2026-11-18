@@ -1,244 +1,435 @@
 <!DOCTYPE html>
-<html lang="pt-br" xmlns:th="http://thymeleaf.org"
-      xmlns:sec="http://thymeleaf.org/extras/spring-security">
+<html lang="pt-br" xmlns:th="http://www.thymeleaf.org"
+      xmlns:sec="http://www.thymeleaf.org/extras/spring-security">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Dashboard - Escala de Serviço</title>
-    <link rel="stylesheet" th:href="@{/css/style.css}">
-    
+    <th:block th:replace="~{fragments/layout :: recursos}"></th:block>
+
     <style>
-        .input-folga {
-            width: 50px;
-            text-align: center;
-            border: 1px solid #ccc;
-            border-radius: 4px;
-            padding: 2px;
-            font-weight: bold;
-            color: #555;
+        /* ---------- Destaque (hero) ---------- */
+        .hero {
+            display: flex;
+            flex-wrap: wrap;
+            align-items: flex-end;
+            justify-content: space-between;
+            gap: 1.5rem;
+            color: #fff;
+            padding: clamp(1rem, 4vw, 3rem) 0 clamp(1.5rem, 3vw, 2.5rem);
         }
-        .input-data {
-            width: 120px;
-            text-align: center;
-            border: 1px solid #ccc;
-            border-radius: 4px;
-            padding: 2px;
-            font-size: 0.85rem;
-            color: #555;
-        }
-        .btn-salvar-folga {
-            background-color: #2ECC71;
-            color: white;
-            border: none;
-            border-radius: 4px;
-            padding: 3px 6px;
-            cursor: pointer;
-            margin-left: 5px;
-            font-size: 0.8rem;
-        }
-        .btn-salvar-folga:hover {
-            background-color: #27AE60;
-        }
-        .btn-salvar-data {
-            background-color: #F39C12;
-            color: white;
-            border: none;
-            border-radius: 4px;
-            padding: 3px 6px;
-            cursor: pointer;
-            margin-left: 5px;
-            font-size: 0.8rem;
-        }
-        .btn-salvar-data:hover {
-            background-color: #E67E22;
-        }
-        .btn-forcar {
-            background-color: #e74c3c;
-            color: white;
-            border: none;
-            border-radius: 4px;
-            padding: 5px 10px;
-            cursor: pointer;
-            font-size: 0.8rem;
-            text-decoration: none;
-            display: inline-block;
-        }
-        .btn-forcar:hover {
-            background-color: #c0392b;
-        }
-        .badge {
-            padding: 3px 8px;
-            border-radius: 12px;
+        .hero-eyebrow {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 0.35rem 0.8rem;
+            border-radius: 999px;
+            border: 1px solid rgba(201, 165, 76, 0.45);
+            background: rgba(201, 165, 76, 0.12);
+            color: var(--latao-claro);
             font-size: 0.75rem;
-            font-weight: bold;
+            font-weight: 600;
+            letter-spacing: 0.12em;
             text-transform: uppercase;
         }
-        .badge-apto { background-color: #2ECC71; color: white; }
-        .badge-afastado { background-color: #E74C3C; color: white; }
-        /* Nova classe para Serviço Externo adicionada */
-        .badge-externo { background-color: #F39C12; color: white; } 
+        .hero-eyebrow .pulso {
+            width: 8px; height: 8px; border-radius: 50%;
+            background: #5BD38A;
+            box-shadow: 0 0 0 0 rgba(91, 211, 138, .7);
+            animation: pulso 2s infinite;
+        }
+        .hero h1 {
+            margin: 0.9rem 0 0.4rem;
+            font-family: var(--fonte-titulo);
+            font-size: clamp(2.4rem, 6vw, 4.4rem);
+            line-height: 0.95;
+            letter-spacing: 0.01em;
+            text-transform: uppercase;
+        }
+        .hero h1 span { color: var(--latao); }
+        .hero p { margin: 0; color: rgba(255, 255, 255, 0.7); font-size: 1.02rem; max-width: 560px; }
+        .hero-data {
+            text-align: right;
+            color: rgba(255, 255, 255, 0.75);
+            font-size: 0.9rem;
+        }
+        @media (max-width: 640px) { .hero-data { text-align: left; } }
+        .militar-nome span:nth-child(2) { white-space: nowrap; }
+        .hero-data strong {
+            display: block;
+            font-family: var(--fonte-titulo);
+            font-size: 2rem;
+            color: #fff;
+            text-transform: capitalize;
+        }
+
+        /* ---------- Cartões de serviço ---------- */
+        .servico-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 1.25rem;
+            margin-bottom: 1.25rem;
+        }
+        .servico {
+            position: relative;
+            overflow: hidden;
+            padding: 1.75rem;
+            border-radius: var(--raio);
+            color: #fff;
+            background: linear-gradient(150deg, rgba(62, 76, 44, 0.92), rgba(28, 35, 24, 0.95));
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            box-shadow: var(--sombra);
+            backdrop-filter: blur(8px);
+            -webkit-backdrop-filter: blur(8px);
+        }
+        .servico::after {
+            content: '';
+            position: absolute;
+            right: -40px; top: -40px;
+            width: 180px; height: 180px;
+            border-radius: 50%;
+            background: radial-gradient(circle, rgba(201, 165, 76, 0.28), transparent 70%);
+        }
+        .servico.reserva { background: linear-gradient(150deg, rgba(36, 58, 74, 0.92), rgba(20, 28, 34, 0.95)); }
+        .servico.reserva::after { background: radial-gradient(circle, rgba(94, 170, 220, 0.25), transparent 70%); }
+
+        .servico-topo { display: flex; align-items: center; justify-content: space-between; gap: 1rem; }
+        .servico-rotulo {
+            font-size: 0.75rem;
+            font-weight: 700;
+            letter-spacing: 0.14em;
+            text-transform: uppercase;
+            color: var(--latao-claro);
+        }
+        .servico.reserva .servico-rotulo { color: #9CCBEA; }
+        .servico-icone {
+            display: grid; place-items: center;
+            width: 46px; height: 46px; border-radius: 12px;
+            background: rgba(255, 255, 255, 0.08);
+            border: 1px solid rgba(255, 255, 255, 0.12);
+            font-size: 1.2rem;
+        }
+        .servico-nome {
+            position: relative;
+            z-index: 1;
+            margin: 1.1rem 0 0.35rem;
+            font-family: var(--fonte-titulo);
+            font-size: clamp(2rem, 4vw, 2.7rem);
+            line-height: 1;
+            text-transform: uppercase;
+        }
+        .servico-nome.vazio { color: rgba(255, 255, 255, 0.45); }
+        .servico-folga {
+            display: inline-flex; align-items: center; gap: 0.4rem;
+            color: rgba(255, 255, 255, 0.7);
+            font-size: 0.92rem;
+        }
+        .servico-folga b { color: #fff; font-size: 1.05rem; }
+        .servico-acao {
+            position: relative;
+            z-index: 1;
+            display: inline-flex; align-items: center; gap: 0.5rem;
+            margin-top: 1.25rem;
+            padding: 0.55rem 1rem;
+            border-radius: 999px;
+            background: rgba(255, 255, 255, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.18);
+            color: #fff;
+            font-size: 0.85rem;
+            font-weight: 600;
+            text-decoration: none;
+            transition: background-color .2s;
+        }
+        .servico-acao:hover { background: rgba(255, 255, 255, 0.2); }
+
+        /* ---------- Números rápidos ---------- */
+        .numeros {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+            gap: 1rem;
+            margin-bottom: 1.75rem;
+        }
+        .numero {
+            padding: 1rem 1.2rem;
+            border-radius: 12px;
+            background: rgba(255, 255, 255, 0.06);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            color: rgba(255, 255, 255, 0.7);
+            font-size: 0.8rem;
+            letter-spacing: 0.06em;
+            text-transform: uppercase;
+            backdrop-filter: blur(8px);
+            -webkit-backdrop-filter: blur(8px);
+        }
+        .numero strong {
+            display: block;
+            font-family: var(--fonte-titulo);
+            font-size: 2.1rem;
+            line-height: 1.1;
+            color: #fff;
+        }
+        .numero.ok strong { color: #6FDB9A; }
+        .numero.alerta strong { color: #F2B26B; }
+        .numero.perigo strong { color: #F08A84; }
+
+        /* ---------- Tabela ---------- */
+        .militar-nome { display: flex; align-items: center; gap: 0.75rem; font-weight: 600; }
+        .militar-avatar {
+            display: grid; place-items: center;
+            width: 36px; height: 36px; border-radius: 10px;
+            background: var(--oliva-100);
+            color: var(--oliva-600);
+            font-family: var(--fonte-titulo);
+            font-size: 1rem;
+            flex-shrink: 0;
+        }
+        .proximo-na-escala .militar-avatar { background: var(--latao); color: var(--oliva-900); }
+        .tag-proximo {
+            margin-left: 0.4rem;
+            padding: 0.15rem 0.5rem;
+            border-radius: 6px;
+            background: var(--oliva-800);
+            color: var(--latao-claro);
+            font-size: 0.68rem;
+            letter-spacing: 0.08em;
+            text-transform: uppercase;
+        }
+        .folga-num {
+            display: inline-grid; place-items: center;
+            min-width: 42px; height: 30px; padding: 0 0.5rem;
+            border-radius: 8px;
+            background: var(--oliva-100);
+            font-weight: 700;
+            color: var(--oliva-700);
+        }
+        .acoes { display: flex; flex-wrap: wrap; gap: 0.5rem; align-items: center; justify-content: center; }
+        .acoes form { display: flex; gap: 0.4rem; align-items: center; margin: 0; }
+        .acoes input[type="date"] {
+            width: auto !important;
+            padding: 0.4rem 0.5rem !important;
+            font-size: 0.82rem !important;
+            border-radius: 8px !important;
+        }
+        .btn-mini {
+            display: inline-flex; align-items: center; gap: 0.35rem;
+            padding: 0.45rem 0.75rem;
+            border-radius: 8px;
+            border: 1px solid transparent;
+            font: 600 0.8rem var(--fonte);
+            text-decoration: none;
+            cursor: pointer;
+            white-space: nowrap;
+            transition: filter .2s, transform .15s;
+        }
+        .btn-mini:hover { filter: brightness(1.06); transform: translateY(-1px); }
+        .btn-editar { background: #fff; color: var(--oliva-700); border-color: #D6D8CC; }
+        .btn-salvar { background: var(--oliva-500); color: #fff; }
+
+        .vazio-tabela { text-align: center; padding: 2.5rem 1rem !important; color: var(--texto-suave); }
+
+        .aviso-ok {
+            display: flex; align-items: center; gap: 0.75rem;
+            padding: 0.9rem 1.2rem;
+            margin-bottom: 1.25rem;
+            border-radius: 12px;
+            background: rgba(47, 158, 91, 0.18);
+            border: 1px solid rgba(111, 219, 154, 0.4);
+            color: #DDF7E7;
+            font-weight: 500;
+        }
+
+        @keyframes pulso {
+            0% { box-shadow: 0 0 0 0 rgba(91, 211, 138, .7); }
+            70% { box-shadow: 0 0 0 10px rgba(91, 211, 138, 0); }
+            100% { box-shadow: 0 0 0 0 rgba(91, 211, 138, 0); }
+        }
     </style>
 </head>
 <body>
+    <div th:replace="~{fragments/layout :: fundo}"></div>
+    <header th:replace="~{fragments/layout :: cabecalho('escala')}"></header>
 
-    <header class="header">
-        <div class="logo">Permanência CSUP</div>
-        <nav>
-            <a th:href="@{/dashboard}" style="text-decoration: underline;">Escala</a>
-            
-            <span sec:authorize="hasRole('ADM')">
-                <a th:href="@{/admin/novo-militar}">Cadastrar Militar</a>
-                <a th:href="@{/admin/afastar}">Impedimentos</a>
-                <a th:href="@{/admin/controle}">Sv.Externo</a>
-                <a th:href="@{/admin/troca}">Troca de Serviço</a>
-                <a th:href="@{/admin/feriados}">Feriados</a>
-                <a th:href="@{/admin/usuarios}">Administradores</a>
-            </span>
-            
-            <form sec:authorize="isAuthenticated()" th:action="@{/logout}" method="post" style="display: inline;">
-                <button type="submit" class="btn-primary" style="background: none; border: none; font-size: 1rem; margin-left: 1rem; cursor: pointer; color: white;">
-                    Sair
-                </button>
-            </form>
+    <main class="main-container">
 
-            <a sec:authorize="!isAuthenticated()" th:href="@{/login}" class="btn-primary" style="margin-left: 1.5rem; text-decoration: none;">
-                Área Administrativa
-            </a>
-        </nav>
-    </header>
+        <section class="hero">
+            <div>
+                <span class="hero-eyebrow"><span class="pulso"></span> Escala em tempo real</span>
+                <h1>Permanência <span>do dia</span></h1>
+                <p>
+                    <span sec:authorize="isAuthenticated()">
+                        Bem-vindo, <strong sec:authentication="name">Usuário</strong>.
+                    </span>
+                    Previsão automática da escala por folga, afastamentos e feriados.
+                </p>
+            </div>
+            <div class="hero-data">
+                Hoje
+                <strong id="hoje" th:text="${#temporals.format(#temporals.createToday(), 'dd/MM/yyyy')}">17/11/2026</strong>
+            </div>
+            <script>
+                // Mostra o dia da semana em português, ex.: "terça, 17/11"
+                (function () {
+                    var el = document.getElementById('hoje');
+                    if (!el || !window.Intl) return;
+                    var d = new Date();
+                    var semana = d.toLocaleDateString('pt-BR', { weekday: 'long' }).replace('-feira', '');
+                    el.textContent = semana + ', ' + d.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' });
+                })();
+            </script>
+        </section>
 
-    <div class="main-container">
-        
-        <div th:if="${mensagem != null}" class="card" style="padding: 1rem; background-color: #d4edda; border-left: 5px solid #28a745; margin-bottom: 1.5rem;">
-            <p th:text="${mensagem}" style="margin: 0; color: #155724; font-weight: 500;"></p>
+        <section th:replace="~{fragments/layout :: alertaUltimaHora(${ultimaHora})}"></section>
+
+        <div th:if="${mensagem != null}" class="aviso-ok">
+            <i class="fas fa-circle-check"></i>
+            <span th:text="${mensagem}">Operação realizada.</span>
         </div>
-        
-        <div class="card" style="padding: 1rem 1.5rem; margin-bottom: 1.5rem;">
-            <h2 style="font-size: 1.2rem; margin: 0;">
-                <span sec:authorize="isAuthenticated()">
-                    Bem-vindo, <span sec:authentication="name" style="color: var(--verde-oliva-principal, #556B2F);">Usuário</span>!
-                </span>
-                <span sec:authorize="!isAuthenticated()">
-                    Bem-vindo!
-                </span>
-            </h2>
-            <p style="margin: 0.5rem 0 0 0; font-size: 0.9rem; color: #666;">Previsão da escala de permanência.</p>
-        </div>
-        
-        <div class="grid" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 1.5rem; margin-bottom: 2rem;">
 
-            <!-- CARD PRÓXIMO SERVIÇO -->
-            <div class="card" style="margin-bottom: 0; background-color: #fff; border-left: 5px solid #556B2F;">
-                <h3 style="margin-top: 0; color: #556B2F; font-size: 1rem; text-transform: uppercase; letter-spacing: 1px;">Próximo Serviço (Titular)</h3>
-                <div th:if="${servicoHoje != null}">
-                    <h2 style="margin: 0.5rem 0; font-size: 1.8rem;" 
+        <section class="servico-grid">
+            <!-- TITULAR -->
+            <article class="servico">
+                <div class="servico-topo">
+                    <span class="servico-rotulo">Serviço de hoje · Titular</span>
+                    <span class="servico-icone"><i class="fas fa-star"></i></span>
+                </div>
+                <th:block th:if="${servicoHoje != null}">
+                    <h2 class="servico-nome"
                         th:text="${(servicoHoje.graduacao != null ? servicoHoje.graduacao : '') + ' ' + (servicoHoje.nomeGuerra != null ? servicoHoje.nomeGuerra : '')}">Sgt Silva</h2>
-                    <span th:text="${'(Folga ' + (servicoHoje.folga != null ? servicoHoje.folga : '0') + ')'}" style="color: #666; font-weight: 500;">(Folga 15)</span>
-                    <div sec:authorize="hasRole('ADM')" style="margin-top: 15px;">
-                        <a th:href="@{/admin/troca}" class="btn-forcar" style="background-color: #556B2F;">
-                            <i class="fas fa-exchange-alt"></i> Substituir Titular
-                        </a>
+                    <span class="servico-folga"><i class="fas fa-bed"></i> Folga
+                        <b th:text="${servicoHoje.folga != null ? servicoHoje.folga : '0'}">15</b> dias</span>
+                    <div sec:authorize="hasRole('ADM')">
+                        <a th:href="@{/admin/troca}" class="servico-acao"><i class="fas fa-right-left"></i> Trocar serviço de hoje</a>
                     </div>
-                </div>
-                <div th:if="${servicoHoje == null}">
-                    <h2 style="margin: 0.5rem 0; color: #999;">Ninguém escalado</h2>
-                </div>
-            </div>
+                </th:block>
+                <h2 th:if="${servicoHoje == null}" class="servico-nome vazio">Ninguém escalado</h2>
+            </article>
 
-            <!-- CARD PRÓXIMO SUBSTITUTO -->
-            <div class="card" style="margin-bottom: 0; background-color: #fff; border-left: 5px solid #3498DB;">
-                <h3 style="margin-top: 0; color: #3498DB; font-size: 1rem; text-transform: uppercase; letter-spacing: 1px;">Próximo Substituto (Reserva)</h3>
-                <div th:if="${substitutoAmanha != null}">
-                    <h2 style="margin: 0.5rem 0; font-size: 1.8rem;" 
-                        th:text="${(substitutoAmanha.graduacao != null ? substitutoAmanha.graduacao : '') + ' ' + (substitutoAmanha.nomeGuerra != null ? substitutoAmanha.nomeGuerra : '')}">Cb Nascimento</h2>
-                    <span th:text="${'(Folga ' + (substitutoAmanha.folga != null ? substitutoAmanha.folga : '0') + ')'}" style="color: #666; font-weight: 500;">(Folga 14)</span>
-                    <div sec:authorize="hasRole('ADM')" style="margin-top: 15px;">
-                        <a th:href="@{/admin/troca}" class="btn-forcar" style="background-color: #3498DB;">
-                            <i class="fas fa-sync"></i> Mudar Reserva
-                        </a>
-                    </div>
+            <!-- RESERVA -->
+            <article class="servico reserva">
+                <div class="servico-topo">
+                    <span class="servico-rotulo">Serviço de hoje · Reserva</span>
+                    <span class="servico-icone"><i class="fas fa-shield"></i></span>
                 </div>
-                <div th:if="${substitutoAmanha == null}">
-                    <h2 style="margin: 0.5rem 0; color: #999;">Sem Reserva</h2>
+                <th:block th:if="${substitutoAmanha != null}">
+                    <h2 class="servico-nome"
+                        th:text="${(substitutoAmanha.graduacao != null ? substitutoAmanha.graduacao : '') + ' ' + (substitutoAmanha.nomeGuerra != null ? substitutoAmanha.nomeGuerra : '')}">Cb Nascimento</h2>
+                    <span class="servico-folga"><i class="fas fa-bed"></i> Folga
+                        <b th:text="${substitutoAmanha.folga != null ? substitutoAmanha.folga : '0'}">14</b> dias</span>
+                </th:block>
+                <h2 th:if="${substitutoAmanha == null}" class="servico-nome vazio">Sem reserva</h2>
+            </article>
+        </section>
+
+        <section class="numeros" th:with="lista=${listaMilitares != null ? listaMilitares : {}}">
+            <div class="numero"><strong th:text="${#lists.size(lista)}">11</strong> Efetivo na escala</div>
+            <div class="numero ok"><strong th:text="${#lists.size(lista.?[status == 'APTO'])}">9</strong> Aptos</div>
+            <div class="numero perigo"><strong th:text="${#lists.size(lista.?[status == 'AFASTADO'])}">1</strong> Afastados</div>
+            <div class="numero alerta"><strong th:text="${#lists.size(lista.?[status != 'APTO' and status != 'AFASTADO'])}">1</strong> Serviço externo</div>
+        </section>
+
+        <!-- AVISOS DA SEMANA -->
+        <section class="card">
+            <div class="card-header">
+                <h2><i class="fas fa-bullhorn"></i> Avisos da semana</h2>
+                <div style="display: flex; gap: 0.5rem; flex-wrap: wrap;">
+                    <a th:href="@{/mapa}" class="btn-mini btn-editar"><i class="fas fa-map-location-dot"></i> Mapa da semana</a>
+                    <a sec:authorize="hasRole('ADM')" th:href="@{/admin/avisos}" class="btn-primary"><i class="fas fa-plus"></i> Novo aviso</a>
                 </div>
             </div>
-        </div>
+            <div class="avisos-grade" th:if="${avisos != null and !#lists.isEmpty(avisos)}">
+                <article th:each="aviso : ${avisos}" class="aviso" th:classappend="${'prioridade-' + aviso.prioridade}">
+                    <div class="aviso-topo">
+                        <h4 th:text="${aviso.titulo}">Formatura geral</h4>
+                        <span class="tag-prioridade" th:classappend="${aviso.prioridade}" th:text="${aviso.prioridade.rotulo}">Normal</span>
+                    </div>
+                    <p th:if="${aviso.mensagem != null}" th:text="${aviso.mensagem}">Sexta às 7h no pátio.</p>
+                    <div class="aviso-rodape">
+                        <span><i class="far fa-calendar"></i>
+                            <th:block th:text="${#temporals.format(aviso.dataInicio, 'dd/MM')}">17/11</th:block><th:block th:if="${aviso.dataFim != aviso.dataInicio}" th:text="${' a ' + #temporals.format(aviso.dataFim, 'dd/MM')}"></th:block></span>
+                        <span th:if="${aviso.autor != null}"><i class="far fa-user"></i> <th:block th:text="${aviso.autor}">root</th:block></span>
+                    </div>
+                </article>
+            </div>
+            <div class="vazio-suave" th:if="${avisos == null or #lists.isEmpty(avisos)}">
+                <i class="far fa-bell-slash"></i> Nenhum aviso para esta semana.
+            </div>
+        </section>
 
         <!-- TABELA DE PREVISÃO DA ESCALA -->
-        <div class="card">
+        <section class="card">
             <div class="card-header">
-                <h2>Previsão da Escala (Por Folga)</h2>
+                <h2><i class="fas fa-list-ol"></i> Previsão da escala</h2>
                 <div sec:authorize="hasRole('ADM')">
-                    <a th:href="@{/admin/novo-militar}" class="btn-primary" style="font-size: 0.9rem;">
-                        <i class="fas fa-plus"></i> Adicionar Militar
-                    </a>
+                    <a th:href="@{/admin/novo-militar}" class="btn-primary"><i class="fas fa-plus"></i> Adicionar militar</a>
                 </div>
             </div>
-            
-            <table class="escala-table">
-                <thead>
-                    <tr>
-                        <th style="width: 20%;">Militar</th>
-                        <th style="width: 15%; text-align: center;">Folga</th>
-                        <th style="width: 15%; text-align: center;">Status</th>
-                        <th style="width: 20%; text-align: center;">Último Serviço</th>
-                        <th sec:authorize="hasRole('ADM')" style="width: 30%; text-align: center;">Ações Administrativas</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    <tr th:each="militar : ${listaMilitares}" 
-                        th:class="${militar != null and militar.id == proximoMilitarId} ? 'proximo-na-escala' : ''">
-                        
-                        <td th:text="${(militar?.graduacao != null ? militar.graduacao : '') + ' ' + (militar?.nomeGuerra != null ? militar.nomeGuerra : '')}">Militar</td>
-                        
-                        <td style="text-align: center;" th:text="${militar?.folga != null ? militar.folga : '0'}">0</td>
-                        
-                        <!-- Coluna de Status ATUALIZADA para usar a inteligência do back-end -->
-                        <td style="text-align: center;">
-                            <span th:if="${militar != null}"
-                                  th:text="${militar.status}"
-                                  th:classappend="${militar.status == 'APTO' ? 'badge-apto' : (militar.status == 'AFASTADO' ? 'badge-afastado' : 'badge-externo')}"
-                                  class="badge">
-                            </span>
-                            <span th:if="${militar == null}">-</span>
-                        </td>
-                        
-                        <td style="text-align: center;">
-                            <span th:if="${militar?.dataUltimoServico != null}" 
-                                  th:text="${#temporals.format(militar.dataUltimoServico, 'dd/MM/yyyy')}"></span>
-                            <span th:if="${militar?.dataUltimoServico == null}">--/--/----</span>
-                        </td>
-                        
-                        <!-- COLUNA DE AÇÕES ADMINISTRATIVAS (ATUALIZADA) -->
-                        <td sec:authorize="hasRole('ADM')" style="text-align: center;">
-                            
-                            <!-- Botão Editar Original -->
-                            <a th:if="${militar?.id != null}" 
-                               th:href="@{/admin/editar/{id}(id=${militar.id})}" 
-                               class="btn-salvar-data" 
-                               style="text-decoration: none; display: inline-block; vertical-align: middle;">Editar</a>
 
-                            <!-- NOVO: Formulário de Atualização Rápida de Data -->
-                            <form th:if="${militar?.id != null}" th:action="@{/admin/atualizar-data-servico}" method="post" style="display:inline-block; margin-left: 10px; vertical-align: middle;">
-                                <!-- Manda o ID do militar escondido -->
-                                <input type="hidden" name="id" th:value="${militar.id}" />
-                                
-                                <!-- Calendário para escolher a data antiga -->
-                                <input type="date" name="novaData" required 
-                                       style="padding: 3px; font-size: 12px; border-radius: 4px; border: 1px solid #ccc;">
-                                
-                                <!-- Botão Salvar Verde -->
-                                <button type="submit" 
-                                        style="background-color: #2ECC71; color: white; border: none; padding: 4px 8px; border-radius: 4px; cursor: pointer; font-size: 12px; font-weight: bold; margin-left: 5px;">
-                                    Salvar Data
-                                </button>
-                            </form>
+            <div class="tabela-rolagem">
+                <table class="escala-table">
+                    <thead>
+                        <tr>
+                            <th>Militar</th>
+                            <th style="text-align: center;">Folga</th>
+                            <th style="text-align: center;">Status</th>
+                            <th style="text-align: center;">Último serviço</th>
+                            <th sec:authorize="hasRole('ADM')" style="text-align: center;">Ações administrativas</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr th:each="militar : ${listaMilitares}"
+                            th:class="${militar != null and militar.id == proximoMilitarId} ? 'proximo-na-escala' : ''">
 
-                        </td>
-                    </tr>
-                </tbody>
-            </table>
-        </div>
-    </div>
+                            <td>
+                                <div class="militar-nome">
+                                    <span class="militar-avatar"
+                                          th:text="${militar?.nomeGuerra != null and !#strings.isEmpty(militar.nomeGuerra) ? #strings.toUpperCase(#strings.substring(militar.nomeGuerra, 0, 1)) : '?'}">S</span>
+                                    <span th:text="${(militar?.graduacao != null ? militar.graduacao : '') + ' ' + (militar?.nomeGuerra != null ? militar.nomeGuerra : '')}">Militar</span>
+                                    <span th:if="${militar != null and militar.id == proximoMilitarId}" class="tag-proximo">Próximo</span>
+                                </div>
+                            </td>
+
+                            <td style="text-align: center;">
+                                <span class="folga-num" th:text="${militar?.folga != null ? militar.folga : '0'}">0</span>
+                            </td>
+
+                            <td style="text-align: center;">
+                                <span th:if="${militar != null}"
+                                      th:text="${militar.status}"
+                                      th:classappend="${militar.status == 'APTO' ? 'badge-apto' : (militar.status == 'AFASTADO' ? 'badge-afastado' : 'badge-externo')}"
+                                      class="badge"></span>
+                                <span th:if="${militar == null}">-</span>
+                            </td>
+
+                            <td style="text-align: center; color: var(--texto-suave);">
+                                <span th:if="${militar?.dataUltimoServico != null}"
+                                      th:text="${#temporals.format(militar.dataUltimoServico, 'dd/MM/yyyy')}"></span>
+                                <span th:if="${militar?.dataUltimoServico == null}">--/--/----</span>
+                            </td>
+
+                            <td sec:authorize="hasRole('ADM')">
+                                <div class="acoes" th:if="${militar?.id != null}">
+                                    <a th:href="@{/admin/editar/{id}(id=${militar.id})}" class="btn-mini btn-editar">
+                                        <i class="fas fa-pen"></i> Editar</a>
+
+                                    <form th:action="@{/admin/atualizar-data-servico}" method="post">
+                                        <input type="hidden" name="id" th:value="${militar.id}" />
+                                        <input type="date" name="novaData" required aria-label="Data do último serviço">
+                                        <button type="submit" class="btn-mini btn-salvar"><i class="fas fa-check"></i> Salvar data</button>
+                                    </form>
+                                </div>
+                            </td>
+                        </tr>
+                        <tr th:if="${listaMilitares == null or #lists.isEmpty(listaMilitares)}">
+                            <td colspan="5" class="vazio-tabela">
+                                <i class="fas fa-users-slash"></i> Nenhum militar cadastrado ainda.
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </section>
+    </main>
+
+    <footer th:replace="~{fragments/layout :: rodape}"></footer>
 </body>
 </html>

@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<html lang="pt-br" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Algo deu errado - Escala de Serviço</title>
+    <th:block th:replace="~{fragments/layout :: recursos}"></th:block>
+    <style>
+        .erro-caixa { max-width: 560px; margin: 8vh auto 0; text-align: center; }
+        .erro-codigo { font-family: var(--fonte-titulo); font-size: 5rem; line-height: 1; color: var(--latao); }
+        .erro-caixa h1 { margin: 0.5rem 0; font-family: var(--fonte-titulo); text-transform: uppercase; color: var(--oliva-800); }
+        .erro-caixa p { color: var(--texto-suave); }
+    </style>
+</head>
+<body>
+    <div th:replace="~{fragments/layout :: fundo}"></div>
+    <main class="main-container">
+        <div class="card erro-caixa">
+            <div class="erro-codigo" th:text="${status != null ? status : 'Erro'}">404</div>
+            <h1 th:if="${status == 404}">Página não encontrada</h1>
+            <h1 th:if="${status == 403}">Acesso negado</h1>
+            <h1 th:if="${status != 404 and status != 403}">Algo deu errado</h1>
+            <p th:if="${status == 404}">O endereço não existe ou foi digitado errado.</p>
+            <p th:if="${status == 403}">Você não tem permissão para essa ação, ou a página ficou aberta tempo demais. Recarregue e tente de novo.</p>
+            <p th:if="${status != 404 and status != 403}">O sistema não conseguiu concluir a ação. Se continuar, procure a Seção de TI.</p>
+            <a th:href="@{/dashboard}" class="btn-primary" style="margin-top: 1rem;"><i class="fas fa-house"></i> Voltar ao painel</a>
+        </div>
+    </main>
+</body>
+</html>

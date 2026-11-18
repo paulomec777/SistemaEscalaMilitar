@@ -1,6 +1,8 @@
 package br.mil.eb.escala.controller;
 
+import br.mil.eb.escala.service.AvisoService;
 import br.mil.eb.escala.service.EscalaService;
+import br.mil.eb.escala.service.MissaoService;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -9,9 +11,13 @@ import org.springframework.web.bind.annotation.GetMapping;
 public class PageController {
 
     private final EscalaService escalaService;
+    private final AvisoService avisoService;
+    private final MissaoService missaoService;
 
-    public PageController(EscalaService escalaService) {
+    public PageController(EscalaService escalaService, AvisoService avisoService, MissaoService missaoService) {
         this.escalaService = escalaService;
+        this.avisoService = avisoService;
+        this.missaoService = missaoService;
     }
     
     @GetMapping("/login")
@@ -32,6 +38,8 @@ public class PageController {
         model.addAttribute("listaMilitares", militares);
         model.addAttribute("servicoHoje", proximo);       
         model.addAttribute("substitutoAmanha", substituto); 
+        model.addAttribute("avisos", avisoService.avisosVigentes());
+        model.addAttribute("ultimaHora", missaoService.missoesDeUltimaHora());
         
         //Garante segurança caso a lista venha vazia
         Long proximoId = (proximo != null) ? proximo.getId() : null;

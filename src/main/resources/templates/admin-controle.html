@@ -5,8 +5,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Serviço Externo / Missões - CSUP</title>
-    <link rel="stylesheet" th:href="@{/css/style.css}">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <th:block th:replace="~{fragments/layout :: recursos}"></th:block>
     <style>
         .form-container {
             display: flex; gap: 1rem; align-items: flex-end; flex-wrap: wrap;
@@ -31,26 +30,12 @@
     </style>
 </head>
 <body>
+    <div th:replace="~{fragments/layout :: fundo}"></div>
 
-    <header class="header">
-        <div class="logo">Permanência CSUP</div>
-        <nav>
-            <a th:href="@{/dashboard}">Escala</a>
-            <span sec:authorize="hasRole('ADM')">
-                <a th:href="@{/admin/novo-militar}">Cadastrar Militar</a>
-                <a th:href="@{/admin/afastar}">Impedimentos</a>
-                <a th:href="@{/admin/controle}" style="text-decoration: underline;">Sv.Externo</a>
-                <a th:href="@{/admin/troca}">Troca de Serviço</a>
-                <a th:href="@{/admin/feriados}">Feriados</a>
-                <a th:href="@{/admin/usuarios}">Administradores</a>
-            </span>
-            <form th:action="@{/logout}" method="post" style="display: inline;">
-                <button type="submit" class="btn-primary" style="background: none; border: none; font-size: 1rem; margin-left: 1rem; cursor: pointer; color: white;">Sair</button>
-            </form>
-        </nav>
-    </header>
+    <header th:replace="~{fragments/layout :: cabecalho('controle')}"></header>
 
     <div class="main-container">
+        <div th:replace="~{fragments/layout :: mensagens}"></div>
         
         <div class="card">
             <div class="card-header" style="border-bottom: none; padding-bottom: 0;">
@@ -146,9 +131,7 @@
         
     </div>
     
-    <footer style="text-align: center; padding: 20px; background-color: #f1f1f1; margin-top: 50px;">
-        <p>Sistema de Escala Militar &copy; 2026</p>
-    </footer>
+    <footer th:replace="~{fragments/layout :: rodape}"></footer>
 
 </body>
 </html>

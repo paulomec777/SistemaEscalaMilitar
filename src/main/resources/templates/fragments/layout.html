@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html lang="pt-br" xmlns:th="http://www.thymeleaf.org"
+      xmlns:sec="http://www.thymeleaf.org/extras/spring-security">
+<head>
+    <!--
+        Fragmentos compartilhados por todas as telas.
+        Uso: <th:block th:replace="~{fragments/layout :: recursos}"></th:block> no <head>
+             <div th:replace="~{fragments/layout :: fundo}"></div> logo após <body>
+             <header th:replace="~{fragments/layout :: cabecalho('troca')}"></header>
+             <footer th:replace="~{fragments/layout :: rodape}"></footer>
+    -->
+    <th:block th:fragment="recursos">
+        <link rel="preconnect" href="https://fonts.googleapis.com">
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Saira+Condensed:wght@600;700;800&display=swap" rel="stylesheet">
+        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+        <link rel="stylesheet" th:href="@{/css/style.css}">
+    </th:block>
+</head>
+<body>
+
+    <!--
+        Vídeo de fundo (Higgsfield ou qualquer MP4).
+        O endereço vem da propriedade app.video-fundo (vazio = sem vídeo, só o gradiente).
+        Se o vídeo não existir, fica só o gradiente verde-oliva por trás.
+    -->
+    <div th:fragment="fundo" class="fundo" aria-hidden="true">
+        <video class="fundo-video" autoplay muted loop playsinline preload="auto"
+               th:if="${!#strings.isEmpty(@environment.getProperty('app.video-fundo', ''))}"
+               th:src="${@environment.getProperty('app.video-fundo')}"
+               onerror="this.remove()"></video>
+        <div class="fundo-veu"></div>
+        <div class="fundo-grade"></div>
+    </div>
+
+    <header th:fragment="cabecalho(ativo)" class="header">
+        <a th:href="@{/dashboard}" class="logo">
+            <span class="logo-insignia"><i class="fas fa-shield-halved"></i></span>
+            <span class="logo-texto">
+                <strong>Permanência</strong>
+                <small>CSUP · Escala de Serviço</small>
+            </span>
+        </a>
+
+        <input type="checkbox" id="menu-toggle" class="menu-toggle" aria-label="Abrir menu">
+        <label for="menu-toggle" class="menu-botao"><i class="fas fa-bars"></i></label>
+
+        <nav class="nav">
+            <a th:href="@{/dashboard}" th:classappend="${ativo == 'escala'} ? 'active'">
+                <i class="fas fa-calendar-days"></i> Escala</a>
+            <a th:href="@{/mapa}" th:classappend="${ativo == 'mapa'} ? 'active'">
+                <i class="fas fa-map-location-dot"></i> Mapa da Semana</a>
+
+            <th:block sec:authorize="hasRole('ADM')">
+                <a th:href="@{/admin/missoes}" th:classappend="${ativo == 'missoes'} ? 'active'">
+                    <i class="fas fa-crosshairs"></i> Missões</a>
+                <a th:href="@{/admin/avisos}" th:classappend="${ativo == 'avisos'} ? 'active'">
+                    <i class="fas fa-bullhorn"></i> Avisos</a>
+
+                <div class="nav-grupo" tabindex="0"
+                     th:classappend="${#lists.contains({'cadastro','afastar','controle','troca','feriados','usuarios'}, ativo)} ? 'active'">
+                    <span class="nav-grupo-titulo"><i class="fas fa-sliders"></i> Gestão <i class="fas fa-chevron-down seta"></i></span>
+                    <div class="nav-grupo-itens">
+                        <a th:href="@{/admin/novo-militar}" th:classappend="${ativo == 'cadastro'} ? 'active'">
+                            <i class="fas fa-user-plus"></i> Cadastrar militar</a>
+                        <a th:href="@{/admin/afastar}" th:classappend="${ativo == 'afastar'} ? 'active'">
+                            <i class="fas fa-user-slash"></i> Impedimentos</a>
+                        <a th:href="@{/admin/controle}" th:classappend="${ativo == 'controle'} ? 'active'">
+                            <i class="fas fa-plane-departure"></i> Serviço externo</a>
+                        <a th:href="@{/admin/troca}" th:classappend="${ativo == 'troca'} ? 'active'">
+                            <i class="fas fa-right-left"></i> Trocas de serviço</a>
+                        <a th:href="@{/admin/feriados}" th:classappend="${ativo == 'feriados'} ? 'active'">
+                            <i class="fas fa-flag"></i> Feriados</a>
+                        <a th:href="@{/admin/usuarios}" th:classappend="${ativo == 'usuarios'} ? 'active'">
+                            <i class="fas fa-user-shield"></i> Administradores</a>
+                    </div>
+                </div>
+            </th:block>
+
+            <a sec:authorize="isAuthenticated()" th:href="@{/conta/senha}" th:classappend="${ativo == 'senha'} ? 'active'">
+                <i class="fas fa-key"></i> Minha senha</a>
+
+            <form sec:authorize="isAuthenticated()" th:action="@{/logout}" method="post" class="nav-sair">
+                <button type="submit"><i class="fas fa-arrow-right-from-bracket"></i> Sair</button>
+            </form>
+
+            <a sec:authorize="!isAuthenticated()" th:href="@{/login}" class="nav-entrar">
+                <i class="fas fa-lock"></i> Área Administrativa</a>
+        </nav>
+    </header>
+
+    <!-- Alerta de missões de última hora. Uso: th:replace="~{fragments/layout :: alertaUltimaHora(${ultimaHora})}" -->
+    <section th:fragment="alertaUltimaHora(missoes)" th:if="${missoes != null and !#lists.isEmpty(missoes)}"
+             class="alerta-ultima-hora" role="alert">
+        <span class="alerta-icone"><i class="fas fa-triangle-exclamation"></i></span>
+        <div class="alerta-conteudo">
+            <h3>Missão de última hora</h3>
+            <ul class="alerta-lista">
+                <li th:each="mi : ${missoes}">
+                    <span class="quando" th:text="${mi.hoje ? 'HOJE' : #temporals.format(mi.data, 'dd/MM')} + ${mi.horario != null ? ' ' + #temporals.format(mi.horario, 'HH:mm') : ''}">HOJE 14:00</span>
+                    <strong th:text="${mi.titulo}">Escolta</strong>
+                    <span th:if="${mi.local != null and !#strings.isEmpty(mi.local)}" th:text="${' · ' + mi.local}"></span>
+                    — <span th:text="${mi.nomesMilitares}">Sgt Silva</span>
+                </li>
+            </ul>
+        </div>
+        <a th:href="@{/mapa}" class="alerta-link">Ver no mapa <i class="fas fa-arrow-right"></i></a>
+    </section>
+
+    <!-- Mensagens de retorno (sucesso/erro) das telas de admin.
+         Uso: <div th:replace="~{fragments/layout :: mensagens}"></div> -->
+    <div th:fragment="mensagens" class="mensagens-tela">
+        <div th:if="${mensagem != null}" class="flash flash-ok"><i class="fas fa-circle-check"></i> <span th:text="${mensagem}">Ok</span></div>
+        <div th:if="${erro != null}" class="flash flash-erro"><i class="fas fa-circle-exclamation"></i> <span th:text="${erro}">Erro</span></div>
+        <div th:if="${mensagemErro != null}" class="flash flash-erro"><i class="fas fa-circle-exclamation"></i> <span th:text="${mensagemErro}">Erro</span></div>
+    </div>
+
+    <footer th:fragment="rodape" class="rodape">
+        <span>Sistema de Escala Militar &copy; 2026</span>
+        <span class="rodape-sep">·</span>
+        <span>Desenvolvido com Java por
+            <a href="https://www.linkedin.com/in/paulo-henrique-517268269" target="_blank" rel="noopener">Cb Tomaz</a></span>
+    </footer>
+
+</body>
+</html>

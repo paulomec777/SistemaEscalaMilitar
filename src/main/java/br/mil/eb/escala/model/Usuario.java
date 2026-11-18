@@ -48,7 +48,11 @@ public class Usuario implements UserDetails {
     @Override public String getPassword() { return this.senha; }
     @Override public String getUsername() { return this.login; }
     @Override public boolean isAccountNonExpired() { return true; }
-    @Override public boolean isAccountNonLocked() { return true; }
+    // Marcado na hora do login quando o usuário errou a senha vezes demais (não vai para o banco)
+    @Transient
+    private boolean bloqueadoPorTentativas;
+
+    @Override public boolean isAccountNonLocked() { return !bloqueadoPorTentativas; }
     @Override public boolean isCredentialsNonExpired() { return true; }
     @Override public boolean isEnabled() { return true; }
 }

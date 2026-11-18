@@ -34,10 +34,17 @@ public class FeriadoController {
     //Salva um novo feriado (Nacional ou do Exército que por vez podem mudar)
     @PostMapping("/salvar")
     public String salvar(@Valid Feriado feriado, BindingResult result, RedirectAttributes attributes) {
-        if (result.hasErrors()) {
-            //Mantém o usuário na mesma tela em caso de erro de validação
-            return "admin-feriados"; 
+        if (result.hasErrors() || feriado.getData() == null
+                || feriado.getDescricao() == null || feriado.getDescricao().isBlank()) {
+            //Volta para a tela com o aviso (antes voltava sem a lista e dava erro)
+            attributes.addFlashAttribute("mensagemErro", "Preencha a data e a descrição do feriado.");
+            return "redirect:/admin/feriados";
         }
+        if (feriado.getDescricao().trim().length() > 100) {
+            attributes.addFlashAttribute("mensagemErro", "A descrição do feriado aceita no máximo 100 caracteres.");
+            return "redirect:/admin/feriados";
+        }
+        feriado.setDescricao(feriado.getDescricao().trim());
 
         //Verifica se a data já está cadastrada para evitar duplicidade
         if (feriadoRepository.existsByData(feriado.getData())) {
@@ -51,7 +58,7 @@ public class FeriadoController {
     }
 
     //Remove um feriado (caso o expediente volte ao normal)
-    @GetMapping("/excluir/{id}")
+    @PostMapping("/excluir/{id}")
     public String excluir(@PathVariable("id") Long id, RedirectAttributes attributes) {
         feriadoRepository.deleteById(id);
         attributes.addFlashAttribute("mensagem", "Feriado removido com sucesso!");

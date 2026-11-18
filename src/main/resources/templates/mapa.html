@@ -1,0 +1,547 @@
+<!DOCTYPE html>
+<html lang="pt-br" xmlns:th="http://www.thymeleaf.org"
+      xmlns:sec="http://www.thymeleaf.org/extras/spring-security">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mapa da Semana - Escala de Serviço</title>
+    <th:block th:replace="~{fragments/layout :: recursos}"></th:block>
+
+    <style>
+        .mapa-topo {
+            display: flex; flex-wrap: wrap; align-items: flex-end; justify-content: space-between;
+            gap: 1.25rem; color: #fff; padding: clamp(0.5rem, 3vw, 2rem) 0 1.5rem;
+        }
+        .mapa-topo .selo {
+            display: inline-flex; align-items: center; gap: 0.5rem;
+            padding: 0.35rem 0.8rem; border-radius: 999px;
+            border: 1px solid rgba(201, 165, 76, 0.45); background: rgba(201, 165, 76, 0.12);
+            color: var(--latao-claro); font-size: 0.75rem; font-weight: 600; letter-spacing: 0.12em; text-transform: uppercase;
+        }
+        .mapa-topo h1 {
+            margin: 0.8rem 0 0.3rem; font-family: var(--fonte-titulo);
+            font-size: clamp(2.2rem, 5.5vw, 3.8rem); line-height: 0.95; text-transform: uppercase;
+        }
+        .mapa-topo h1 span { color: var(--latao); }
+        .mapa-topo p { margin: 0; color: rgba(255, 255, 255, 0.7); }
+
+        .semana-nav { display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap; }
+        .semana-nav a, .semana-nav span {
+            display: inline-flex; align-items: center; gap: 0.4rem;
+            padding: 0.55rem 0.9rem; border-radius: 999px;
+            border: 1px solid rgba(255, 255, 255, 0.18); color: #fff; text-decoration: none;
+            font-size: 0.88rem; font-weight: 600; background: rgba(255, 255, 255, 0.06);
+        }
+        .semana-nav a:hover { background: rgba(255, 255, 255, 0.14); }
+        .semana-nav .periodo { background: var(--latao); color: var(--oliva-900); border-color: transparent; }
+
+        .barra-mapa { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 0.75rem; margin: 0 0 0.75rem; }
+        .legenda { display: flex; flex-wrap: wrap; gap: 0.4rem 1rem; color: rgba(255,255,255,0.7); font-size: 0.82rem; }
+        .acoes-mapa { display: flex; align-items: center; gap: 0.75rem; margin-left: auto; }
+        .legenda i { margin-right: 0.3rem; }
+
+        /* ---------- Grade dos 7 dias ---------- */
+        .semana-grade {
+            display: grid;
+            grid-template-columns: repeat(7, minmax(0, 1fr));
+            gap: 0.75rem;
+            margin-bottom: 1.75rem;
+        }
+        @media (max-width: 1200px) { .semana-grade { grid-template-columns: repeat(4, minmax(0, 1fr)); } }
+        @media (max-width: 820px)  { .semana-grade { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+        @media (max-width: 520px)  { .semana-grade { grid-template-columns: 1fr; } }
+
+        .dia {
+            display: flex; flex-direction: column;
+            min-height: 330px;
+            border-radius: var(--raio);
+            background: rgba(246, 245, 239, 0.97);
+            border: 1px solid rgba(255, 255, 255, 0.5);
+            box-shadow: var(--sombra);
+            overflow: hidden;
+        }
+        .dia.sem-expediente { background: rgba(225, 228, 215, 0.9); }
+        .dia.passado { opacity: 0.72; }
+        .dia.hoje { outline: 3px solid var(--latao); outline-offset: 2px; }
+        .dia.urgente { box-shadow: 0 0 0 2px var(--perigo), var(--sombra); }
+
+        .dia-cabeca {
+            display: flex; justify-content: space-between; align-items: center;
+            padding: 0.75rem 0.9rem;
+            background: var(--oliva-800); color: #fff;
+        }
+        .dia.hoje .dia-cabeca { background: linear-gradient(135deg, var(--latao), #A9862F); color: var(--oliva-900); }
+        .dia-nome { font-family: var(--fonte-titulo); font-size: 1.25rem; text-transform: uppercase; line-height: 1; }
+        .dia-data { font-size: 0.8rem; opacity: 0.8; font-weight: 600; }
+        .dia-tag {
+            font-size: 0.62rem; font-weight: 800; letter-spacing: 0.08em; text-transform: uppercase;
+            padding: 0.15rem 0.45rem; border-radius: 6px; background: rgba(255,255,255,0.15);
+        }
+        .dia.hoje .dia-tag { background: var(--oliva-900); color: var(--latao-claro); }
+
+        .dia-corpo { padding: 0.8rem 0.9rem 1rem; display: flex; flex-direction: column; gap: 0.85rem; flex: 1; }
+        .bloco-titulo {
+            font-size: 0.66rem; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase;
+            color: var(--texto-suave); margin-bottom: 0.35rem; display: flex; align-items: center; gap: 0.35rem;
+        }
+
+        .escalado {
+            display: flex; align-items: center; gap: 0.5rem;
+            padding: 0.45rem 0.55rem; border-radius: 9px;
+            background: #fff; border: 1px solid var(--borda);
+            font-size: 0.86rem; font-weight: 600;
+        }
+        .escalado + .escalado, .slot + .slot { margin-top: 0.35rem; }
+        .escalado .papel {
+            flex-shrink: 0; width: 22px; height: 22px; display: grid; place-items: center;
+            border-radius: 6px; font-size: 0.66rem; font-weight: 800;
+            background: var(--latao); color: var(--oliva-900);
+        }
+        .escalado.reserva .papel { background: #CFE3F1; color: #1F6493; }
+        .escalado .nome { font-size: 0.8rem; line-height: 1.2; overflow-wrap: break-word; word-break: normal; hyphens: none; min-width: 0; }
+        .sem-permanencia { font-size: 0.82rem; color: var(--texto-suave); font-style: italic; }
+        .feriado-nome { font-size: 0.78rem; color: #8A6A1C; font-weight: 600; }
+
+        .missao {
+            padding: 0.55rem 0.6rem; border-radius: 9px;
+            background: rgba(85, 107, 47, 0.1); border-left: 3px solid var(--oliva-500);
+            font-size: 0.8rem;
+        }
+        .missao + .missao { margin-top: 0.4rem; }
+        .missao.ultima-hora { background: rgba(200, 66, 59, 0.1); border-left-color: var(--perigo); }
+        .missao-titulo { font-weight: 700; color: var(--texto); display: flex; gap: 0.35rem; align-items: baseline; flex-wrap: wrap; }
+        .missao-hora { font-weight: 800; color: var(--oliva-600); }
+        .missao.ultima-hora .missao-hora { color: var(--perigo); }
+        .missao-urgente {
+            font-size: 0.6rem; font-weight: 800; letter-spacing: 0.06em; text-transform: uppercase;
+            padding: 0.05rem 0.35rem; border-radius: 4px; background: var(--perigo); color: #fff;
+        }
+        .missao-info { color: var(--texto-suave); margin-top: 0.15rem; line-height: 1.35; }
+
+        .em-missao { margin-left: auto; color: var(--perigo); font-size: 0.8rem; }
+        .missao-fora { margin-top: 0.25rem; font-size: 0.7rem; font-weight: 700; color: #1F6493; text-transform: uppercase; letter-spacing: 0.04em; }
+        .chips { display: flex; flex-wrap: wrap; gap: 0.3rem; }
+        .chip {
+            padding: 0.15rem 0.45rem; border-radius: 6px; font-size: 0.72rem; font-weight: 600;
+            background: rgba(200, 66, 59, 0.12); color: #A8322C;
+        }
+        .chip.externo { background: rgba(217, 130, 43, 0.15); color: #A65C12; }
+
+        /* ---------- Modo edição (ADM) ---------- */
+        .botao-editar {
+            display: inline-flex; align-items: center; gap: 0.4rem; padding: 0.55rem 0.9rem; border-radius: 999px;
+            border: 1px solid var(--latao); background: rgba(201,165,76,0.15); color: var(--latao-claro);
+            font: 600 0.88rem var(--fonte); cursor: pointer;
+        }
+        .botao-editar.ativo { background: var(--latao); color: var(--oliva-900); }
+        .fixado { display: none; margin-left: auto; color: #8A6A1C; font-size: 0.75rem; }
+        .modo-edicao .fixado { display: inline; }
+        .em-missao + .fixado { margin-left: 0.3rem; }
+
+        .painel-efetivo {
+            position: sticky; top: 70px; z-index: 50; margin-bottom: 0.75rem; padding: 0.9rem 1rem;
+            border-radius: var(--raio); background: rgba(18,22,15,0.94); border: 1px solid rgba(201,165,76,0.45);
+            box-shadow: var(--sombra); color: rgba(255,255,255,0.85);
+        }
+        .painel-efetivo-topo { margin-bottom: 0.6rem; font-size: 0.8rem; color: rgba(255,255,255,0.6); }
+        .painel-efetivo-topo b { color: var(--latao-claro); }
+        .painel-efetivo-topo span { color: rgba(255,255,255,0.6); font-size: 0.8rem; }
+        .painel-efetivo-topo a { color: var(--latao-claro); }
+        .efetivo-lista { display: flex; flex-wrap: wrap; gap: 0.4rem; max-height: 120px; overflow-y: auto; }
+        .chip-efetivo {
+            display: inline-flex; align-items: center; gap: 0.4rem; padding: 0.35rem 0.65rem; border-radius: 8px;
+            background: #fff; color: var(--texto); font-size: 0.82rem; font-weight: 600; cursor: grab; user-select: none;
+        }
+        .chip-efetivo i { color: #A0A694; font-size: 0.75rem; }
+        .chip-efetivo.indisponivel { opacity: 0.5; }
+        .chip-efetivo:active { cursor: grabbing; }
+
+        .modo-edicao .slot[data-editavel="true"] {
+            min-height: 38px; border-radius: 10px; border: 1.5px dashed #C7CBB8; padding: 2px; transition: background-color .15s, border-color .15s;
+        }
+        .modo-edicao .slot[data-editavel="true"] + .slot { margin-top: 0.35rem; }
+        .modo-edicao .slot[data-editavel="true"] .escalado { cursor: grab; margin: 0; }
+        .modo-edicao .slot.alvo { border-color: var(--oliva-500); background: rgba(85,107,47,0.12); }
+        .modo-edicao .slot[data-editavel="false"] { opacity: 0.6; }
+        .escalado.pendente { border-color: var(--latao); background: #FFF8E6; }
+        .slot-auto { display: flex; align-items: center; gap: 0.4rem; padding: 0.45rem 0.55rem; font-size: 0.78rem; color: var(--texto-suave); font-style: italic; }
+        .remover-vaga { display: none; margin-left: auto; border: none; background: none; color: #A8322C; cursor: pointer; padding: 0 0.15rem; font-size: 0.8rem; }
+        .modo-edicao .slot[data-editavel="true"] .remover-vaga { display: inline; }
+
+        .acoes-salvar[hidden], .painel-efetivo[hidden] { display: none !important; }
+        .acoes-salvar { display: flex; gap: 0.5rem; margin: 0; }
+        .botao-salvar {
+            display: inline-flex; align-items: center; gap: 0.4rem; padding: 0.55rem 1rem; border-radius: 999px; border: none;
+            background: #5E7A35; color: #fff; font: 700 0.88rem var(--fonte); cursor: pointer;
+        }
+        .botao-salvar:disabled { background: rgba(255,255,255,0.12); color: rgba(255,255,255,0.45); cursor: default; }
+        .botao-salvar.pulsando { animation: pulsar-salvar 1.6s ease-in-out infinite; }
+        @keyframes pulsar-salvar {
+            0%, 100% { box-shadow: 0 0 0 0 rgba(111, 219, 154, 0.55); }
+            50% { box-shadow: 0 0 0 7px rgba(111, 219, 154, 0); }
+        }
+        .botao-descartar { border: 1px solid rgba(255,255,255,0.25); background: none; color: #fff; border-radius: 999px; padding: 0.55rem 0.9rem; cursor: pointer; font: 600 0.85rem var(--fonte); }
+        .aviso-mapa { position: fixed; left: 50%; bottom: 1.5rem; transform: translateX(-50%); z-index: 100; padding: 0.6rem 1rem;
+            border-radius: 10px; background: #A8322C; color: #fff; font-size: 0.88rem; box-shadow: var(--sombra); }
+
+        .dica-edicao { color: rgba(255,255,255,0.6); font-size: 0.8rem; }
+        .modo-edicao .dica-edicao { display: none; }
+
+        .resumo-semana { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 1rem; margin-bottom: 1.25rem; }
+        .resumo-semana div {
+            padding: 0.9rem 1.1rem; border-radius: 12px; color: rgba(255,255,255,0.7);
+            background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.1);
+            font-size: 0.78rem; letter-spacing: 0.06em; text-transform: uppercase;
+        }
+        .resumo-semana strong { display: block; font-family: var(--fonte-titulo); font-size: 1.9rem; color: #fff; line-height: 1.1; }
+    </style>
+</head>
+<body>
+    <div th:replace="~{fragments/layout :: fundo}"></div>
+    <header th:replace="~{fragments/layout :: cabecalho('mapa')}"></header>
+
+    <main class="main-container">
+
+        <section class="mapa-topo">
+            <div>
+                <span class="selo"><i class="fas fa-map-location-dot"></i> Mapa de missões e escalados</span>
+                <h1>Mapa da <span>semana</span></h1>
+                <p>Permanência prevista, missões, serviço externo e afastamentos de cada dia.</p>
+            </div>
+            <nav class="semana-nav" aria-label="Navegar entre semanas">
+                <a th:href="@{/mapa(semana=${semana - 1})}"><i class="fas fa-chevron-left"></i> Anterior</a>
+                <span class="periodo"
+                      th:text="${#temporals.format(segunda, 'dd/MM') + ' a ' + #temporals.format(domingo, 'dd/MM')}">17/11 a 23/11</span>
+                <a th:if="${semana != 0}" th:href="@{/mapa}"><i class="fas fa-calendar-day"></i> Esta semana</a>
+                <a th:href="@{/mapa(semana=${semana + 1})}">Próxima <i class="fas fa-chevron-right"></i></a>
+            </nav>
+        </section>
+
+        <div th:replace="~{fragments/layout :: mensagens}"></div>
+
+        <section th:replace="~{fragments/layout :: alertaUltimaHora(${ultimaHora})}"></section>
+
+
+        <section class="resumo-semana">
+            <div><strong th:text="${totalMissoes}">3</strong> Missões na semana</div>
+            <div><strong th:text="${#lists.size(dias.?[expediente])}">5</strong> Dias de expediente</div>
+            <div><strong th:text="${#lists.size(avisos)}">2</strong> Avisos ativos</div>
+        </section>
+
+        <!-- Barra colada no mapa: legenda + edição (o botão e o efetivo só aparecem para o ADM) -->
+        <div class="barra-mapa">
+            <div class="legenda">
+                <span><i class="fas fa-square" style="color: var(--latao)"></i>T titular</span>
+                <span><i class="fas fa-square" style="color: #9CCBEA"></i>R reserva</span>
+                <span><i class="fas fa-crosshairs" style="color: var(--perigo)"></i>também em missão</span>
+            </div>
+            <div sec:authorize="hasRole('ADM')" class="acoes-mapa">
+                <form id="form-ajustes" th:action="@{/admin/mapa/salvar}" method="post" class="acoes-salvar" hidden>
+                    <input type="hidden" name="semana" th:value="${semana}">
+                    <button type="button" id="botao-descartar" class="botao-descartar">Descartar</button>
+                    <button type="submit" id="botao-salvar" class="botao-salvar" disabled>
+                        <i class="fas fa-floppy-disk"></i> <span id="contador-pendentes">Salvar</span>
+                    </button>
+                </form>
+                <button type="button" id="botao-editar" class="botao-editar">
+                    <i class="fas fa-pen-to-square"></i> <span>Editar</span>
+                </button>
+            </div>
+        </div>
+
+        <!-- Modo edição: o ADM arrasta militares para os dias (de amanhã em diante) -->
+        <section sec:authorize="hasRole('ADM')" class="painel-efetivo" id="painel-efetivo" hidden>
+            <div class="painel-efetivo-topo">Arraste para T ou R · <i class="fas fa-xmark"></i> volta ao automático</div>
+            <div class="efetivo-lista">
+                <span th:each="m : ${efetivo}" class="chip-efetivo" draggable="true"
+                      th:classappend="${m.status != 'APTO'} ? 'indisponivel'"
+                      th:attr="data-id=${m.id},data-nome=${m.graduacao + ' ' + m.nomeGuerra}"
+                      th:title="${m.status != 'APTO'} ? ${m.status} : ${'Folga ' + m.folga}">
+                    <i class="fas fa-grip-vertical"></i> <th:block th:text="${m.graduacao + ' ' + m.nomeGuerra}">Cb Duarte</th:block>
+                </span>
+            </div>
+        </section>
+
+        <section class="semana-grade">
+            <article th:each="dia : ${dias}" class="dia"
+                     th:classappend="${(dia.hoje ? 'hoje ' : '') + (dia.passado ? 'passado ' : '') + (!dia.expediente ? 'sem-expediente ' : '') + (dia.temUltimaHora ? 'urgente' : '')}">
+                <div class="dia-cabeca">
+                    <div>
+                        <div class="dia-nome" th:text="${dia.nomeDia}">Segunda</div>
+                        <div class="dia-data" th:text="${#temporals.format(dia.data, 'dd/MM')}">17/11</div>
+                    </div>
+                    <span class="dia-tag" th:if="${dia.hoje}">Hoje</span>
+                    <span class="dia-tag" th:if="${!dia.hoje and dia.feriado != null}">Feriado</span>
+                </div>
+
+                <div class="dia-corpo">
+                    <!-- Permanência -->
+                    <div>
+                        <div class="bloco-titulo"><i class="fas fa-shield-halved"></i> Permanência</div>
+                        <div th:if="${dia.feriado != null}" class="feriado-nome" th:text="${dia.feriado}">Feriado</div>
+                        <th:block th:if="${dia.expediente}">
+                            <div class="slot" th:attr="data-data=${dia.data},data-papel='TITULAR',data-editavel=${dia.editavel}">
+                                <div class="escalado" th:if="${dia.titular != null}"
+                                     th:attr="data-id=${dia.titular.id},data-nome=${dia.titular.graduacao + ' ' + dia.titular.nomeGuerra}">
+                                    <span class="papel">T</span>
+                                    <span class="nome" th:text="${dia.titular.graduacao + ' ' + dia.titular.nomeGuerra}">Sgt Alves</span>
+                                    <i th:if="${dia.titularEmMissao}" class="fas fa-crosshairs em-missao" title="Também está numa missão neste dia"></i>
+                                    <i sec:authorize="hasRole('ADM')" th:if="${dia.titularFixado}" class="fas fa-thumbtack fixado" title="Fixado pelo ADM"></i>
+                                </div>
+                                <div class="sem-permanencia" th:if="${dia.titular == null}"
+                                     th:text="${dia.passado ? 'Sem registro' : 'Ninguém disponível'}">Sem registro</div>
+                            </div>
+                            <div class="slot" th:attr="data-data=${dia.data},data-papel='RESERVA',data-editavel=${dia.editavel}">
+                                <div class="escalado reserva" th:if="${dia.reserva != null}"
+                                     th:attr="data-id=${dia.reserva.id},data-nome=${dia.reserva.graduacao + ' ' + dia.reserva.nomeGuerra}">
+                                    <span class="papel">R</span>
+                                    <span class="nome" th:text="${dia.reserva.graduacao + ' ' + dia.reserva.nomeGuerra}">Sgt Barros</span>
+                                    <i th:if="${dia.reservaEmMissao}" class="fas fa-crosshairs em-missao" title="Também está numa missão neste dia"></i>
+                                    <i sec:authorize="hasRole('ADM')" th:if="${dia.reservaFixado}" class="fas fa-thumbtack fixado" title="Fixado pelo ADM"></i>
+                                </div>
+                            </div>
+                        </th:block>
+                        <div class="sem-permanencia" th:if="${!dia.expediente}">Sem expediente</div>
+                    </div>
+
+                    <!-- Missões -->
+                    <div th:if="${!#lists.isEmpty(dia.missoes)}">
+                        <div class="bloco-titulo"><i class="fas fa-crosshairs"></i> Missões</div>
+                        <div th:each="mi : ${dia.missoes}" class="missao" th:classappend="${mi.ultimaHora} ? 'ultima-hora'">
+                            <div class="missao-titulo">
+                                <span class="missao-hora" th:if="${mi.horario != null}" th:text="${#temporals.format(mi.horario, 'HH:mm')}">08:00</span>
+                                <span th:text="${mi.titulo}">Escolta</span>
+                                <span class="missao-urgente" th:if="${mi.ultimaHora}">Última hora</span>
+                            </div>
+                            <div class="missao-info" th:if="${mi.local != null and !#strings.isEmpty(mi.local)}">
+                                <i class="fas fa-location-dot"></i> <th:block th:text="${mi.local}">Quartel</th:block>
+                            </div>
+                            <div class="missao-info"><i class="fas fa-users"></i> <th:block th:text="${mi.nomesMilitares}">Cb Duarte</th:block></div>
+                            <div class="missao-fora" th:if="${mi.afastaDaPermanencia}"><i class="fas fa-user-minus"></i> Fora da permanência</div>
+                        </div>
+                    </div>
+
+                    <!-- Serviço externo -->
+                    <div th:if="${!#lists.isEmpty(dia.externos)}">
+                        <div class="bloco-titulo"><i class="fas fa-plane-departure"></i> Serviço externo</div>
+                        <div class="chips">
+                            <span th:each="m : ${dia.externos}" class="chip externo" th:text="${m.graduacao + ' ' + m.nomeGuerra}">Cb Leite</span>
+                        </div>
+                    </div>
+
+                    <!-- Afastados -->
+                    <div th:if="${!#lists.isEmpty(dia.afastados)}">
+                        <div class="bloco-titulo"><i class="fas fa-user-slash"></i> Afastados</div>
+                        <div class="chips">
+                            <span th:each="m : ${dia.afastados}" class="chip" th:text="${m.graduacao + ' ' + m.nomeGuerra}">Sgt Jardim</span>
+                        </div>
+                    </div>
+                </div>
+            </article>
+        </section>
+
+        <!-- Avisos da semana -->
+        <section class="card">
+            <div class="card-header">
+                <h2><i class="fas fa-bullhorn"></i> Avisos da semana</h2>
+                <a sec:authorize="hasRole('ADM')" th:href="@{/admin/avisos}" class="btn-primary"><i class="fas fa-plus"></i> Novo aviso</a>
+            </div>
+            <div class="avisos-grade" th:if="${!#lists.isEmpty(avisos)}">
+                <article th:each="aviso : ${avisos}" class="aviso" th:classappend="${'prioridade-' + aviso.prioridade}">
+                    <div class="aviso-topo">
+                        <h4 th:text="${aviso.titulo}">Formatura</h4>
+                        <span class="tag-prioridade" th:classappend="${aviso.prioridade}" th:text="${aviso.prioridade.rotulo}">Normal</span>
+                    </div>
+                    <p th:if="${aviso.mensagem != null}" th:text="${aviso.mensagem}">Mensagem</p>
+                    <div class="aviso-rodape">
+                        <span><i class="far fa-calendar"></i>
+                            <th:block th:text="${#temporals.format(aviso.dataInicio, 'dd/MM')}">17/11</th:block><th:block th:if="${aviso.dataFim != aviso.dataInicio}" th:text="${' a ' + #temporals.format(aviso.dataFim, 'dd/MM')}"></th:block></span>
+                        <span th:if="${aviso.autor != null}"><i class="far fa-user"></i> <th:block th:text="${aviso.autor}">root</th:block></span>
+                    </div>
+                </article>
+            </div>
+            <div class="vazio-suave" th:if="${#lists.isEmpty(avisos)}">
+                <i class="far fa-bell-slash"></i> Nenhum aviso para esta semana.
+            </div>
+        </section>
+    </main>
+
+    <footer th:replace="~{fragments/layout :: rodape}"></footer>
+
+    <script sec:authorize="hasRole('ADM')">
+    (function () {
+        var botao = document.getElementById('botao-editar');
+        var painel = document.getElementById('painel-efetivo');
+        var form = document.getElementById('form-ajustes');
+        var contador = document.getElementById('contador-pendentes');
+        if (!botao || !painel || !form) return;
+
+        var pendentes = {};   // "aaaa-mm-dd|PAPEL" -> id do militar ("" = volta ao automático)
+        var arrastando = null; // { id, nome, origem: slot ou null }
+
+        function chave(slot) { return slot.dataset.data + '|' + slot.dataset.papel; }
+        function editavel(slot) { return slot && slot.dataset.editavel === 'true'; }
+        function total() { return Object.keys(pendentes).length; }
+
+        var salvar = document.getElementById('botao-salvar');
+
+        function atualizarBarra() {
+            var n = total();
+            contador.textContent = n === 0 ? 'Salvar' : 'Salvar ' + n + (n === 1 ? ' alteração' : ' alterações');
+            salvar.disabled = n === 0;
+            salvar.classList.toggle('pulsando', n > 0);
+            form.hidden = !document.body.classList.contains('modo-edicao') && n === 0;
+        }
+
+        function avisar(texto) {
+            var aviso = document.createElement('div');
+            aviso.className = 'aviso-mapa';
+            aviso.textContent = texto;
+            document.body.appendChild(aviso);
+            setTimeout(function () { aviso.remove(); }, 3500);
+        }
+
+        function botaoRemover() {
+            var b = document.createElement('button');
+            b.type = 'button';
+            b.className = 'remover-vaga';
+            b.title = 'Voltar para a escala automática';
+            b.innerHTML = '<i class="fas fa-xmark"></i>';
+            return b;
+        }
+
+        function preencher(slot, id, nome) {
+            var papel = slot.dataset.papel;
+            slot.innerHTML = '';
+            var div = document.createElement('div');
+            div.className = 'escalado pendente' + (papel === 'RESERVA' ? ' reserva' : '');
+            div.dataset.id = id;
+            div.dataset.nome = nome;
+            div.draggable = true;
+            div.innerHTML = '<span class="papel">' + (papel === 'TITULAR' ? 'T' : 'R') + '</span>';
+            var span = document.createElement('span');
+            span.className = 'nome';
+            span.textContent = nome;
+            div.appendChild(span);
+            div.appendChild(botaoRemover());
+            slot.appendChild(div);
+        }
+
+        function automatico(slot) {
+            slot.innerHTML = '<div class="slot-auto"><i class="fas fa-rotate"></i> Automático (recalcula ao salvar)</div>';
+        }
+
+        // Prepara as vagas editáveis: militares arrastáveis + botão de remover
+        document.querySelectorAll('.slot[data-editavel="true"] .escalado').forEach(function (e) {
+            e.draggable = true;
+            e.appendChild(botaoRemover());
+        });
+
+        // Liga/desliga o modo edição
+        botao.addEventListener('click', function () {
+            var ativo = document.body.classList.toggle('modo-edicao');
+            botao.classList.toggle('ativo', ativo);
+            botao.querySelector('span').textContent = ativo ? 'Concluir' : 'Editar';
+            painel.hidden = !ativo;
+            atualizarBarra();
+            if (!ativo && total() > 0) avisar('Você tem alterações não salvas.');
+        });
+
+        document.addEventListener('dragstart', function (ev) {
+            if (!document.body.classList.contains('modo-edicao')) return;
+            var chip = ev.target.closest && ev.target.closest('.chip-efetivo, .slot[data-editavel="true"] .escalado');
+            if (!chip) return;
+            arrastando = {
+                id: chip.dataset.id,
+                nome: chip.dataset.nome,
+                origem: chip.classList.contains('escalado') ? chip.closest('.slot') : null
+            };
+            ev.dataTransfer.effectAllowed = 'move';
+            ev.dataTransfer.setData('text/plain', chip.dataset.id);
+        });
+
+        document.addEventListener('dragend', function () {
+            arrastando = null;
+            document.querySelectorAll('.slot.alvo').forEach(function (s) { s.classList.remove('alvo'); });
+        });
+
+        document.addEventListener('dragover', function (ev) {
+            if (!arrastando) return;
+            var slot = ev.target.closest && ev.target.closest('.slot');
+            if (!editavel(slot)) return;
+            ev.preventDefault();
+            ev.dataTransfer.dropEffect = 'move';
+            document.querySelectorAll('.slot.alvo').forEach(function (s) { if (s !== slot) s.classList.remove('alvo'); });
+            slot.classList.add('alvo');
+        });
+
+        document.addEventListener('drop', function (ev) {
+            if (!arrastando) return;
+            var slot = ev.target.closest && ev.target.closest('.slot');
+            if (!editavel(slot)) return;
+            ev.preventDefault();
+            slot.classList.remove('alvo');
+            if (arrastando.origem === slot) return;
+
+            // Mesmo militar já está na outra vaga do mesmo dia?
+            var dia = slot.closest('.dia-corpo');
+            var outra = Array.prototype.find.call(dia.querySelectorAll('.slot'), function (s) { return s !== slot; });
+            var naOutra = outra && outra.querySelector('.escalado');
+            if (naOutra && naOutra.dataset.id === arrastando.id && outra !== arrastando.origem) {
+                avisar(arrastando.nome + ' já está neste dia. Um militar não pode ser titular e reserva no mesmo dia.');
+                return;
+            }
+
+            preencher(slot, arrastando.id, arrastando.nome);
+            pendentes[chave(slot)] = arrastando.id;
+
+            // Arrastou de outro dia: a vaga de origem volta para o automático
+            if (arrastando.origem) {
+                automatico(arrastando.origem);
+                pendentes[chave(arrastando.origem)] = '';
+            }
+            atualizarBarra();
+        });
+
+        // "x": devolve a vaga para a escala automática
+        document.addEventListener('click', function (ev) {
+            var remover = ev.target.closest && ev.target.closest('.remover-vaga');
+            if (!remover) return;
+            var slot = remover.closest('.slot');
+            automatico(slot);
+            pendentes[chave(slot)] = '';
+            atualizarBarra();
+        });
+
+        document.getElementById('botao-descartar').addEventListener('click', function () {
+            pendentes = {};
+            window.location.reload();
+        });
+
+        form.addEventListener('submit', function () {
+            form.querySelectorAll('input[name="ajustes"]').forEach(function (i) { i.remove(); });
+            Object.keys(pendentes).forEach(function (k) {
+                var input = document.createElement('input');
+                input.type = 'hidden';
+                input.name = 'ajustes';
+                input.value = k + '|' + pendentes[k];
+                form.appendChild(input);
+            });
+            pendentes = {}; // para o aviso de "sair sem salvar" não disparar
+        });
+
+        window.addEventListener('beforeunload', function (ev) {
+            if (total() > 0) { ev.preventDefault(); ev.returnValue = ''; }
+        });
+
+        // Depois de salvar, volta já no modo edição
+        try {
+            if (sessionStorage.getItem('mapa-editando') === '1') botao.click();
+            botao.addEventListener('click', function () {
+                sessionStorage.setItem('mapa-editando', document.body.classList.contains('modo-edicao') ? '1' : '0');
+            });
+        } catch (e) { /* navegador sem sessionStorage: segue sem lembrar */ }
+    })();
+    </script>
+</body>
+</html>

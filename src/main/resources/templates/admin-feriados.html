@@ -5,32 +5,16 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Admin - Gerenciar Feriados</title>
-    <link rel="stylesheet" th:href="@{/css/style.css}">
+    <th:block th:replace="~{fragments/layout :: recursos}"></th:block>
 </head>
-<body style="display: flex; flex-direction: column; min-height: 100vh; margin: 0;">
+<body>
+    <div th:replace="~{fragments/layout :: fundo}"></div>
 
-    <!-- Cabeçalho -->
-    <header class="header">
-        <div class="logo">Permanência CSUP</div>
-        <nav>
-            <a th:href="@{/dashboard}">Escala</a>
-            <a th:href="@{/admin/novo-militar}" sec:authorize="hasRole('ADM')">Cadastrar Militar</a>
-            <a th:href="@{/admin/afastar}" sec:authorize="hasRole('ADM')">Impedimentos</a>
-            <a th:href="@{/admin/controle}" sec:authorize="hasRole('ADM')">Sv.Externo</a>
-            <a th:href="@{/admin/troca}" sec:authorize="hasRole('ADM')">Troca de Serviço</a>
-            <a th:href="@{/admin/feriados}" sec:authorize="hasRole('ADM')">Feriados</a>
-            <a th:href="@{/admin/usuarios}" sec:authorize="hasRole('ADM')">Administradores</a>
-            
-            <form th:action="@{/logout}" method="post" style="display: inline;">
-                <button type="submit" class="btn-primary" style="background: none; border: none; font-size: 1rem; margin-left: 1rem; cursor: pointer; color: white;">
-                    Sair
-                </button>
-            </form>
-        </nav>
-    </header>
+    <header th:replace="~{fragments/layout :: cabecalho('feriados')}"></header>
 
     <!-- Conteúdo Principal - CENTRALIZADO e FLEXÍVEL -->
     <div class="main-container" style="flex: 1; display: flex; flex-direction: column; align-items: center; padding: 2rem 20px; box-sizing: border-box;">
+        <div th:replace="~{fragments/layout :: mensagens}"></div>
         
         <!-- Coluna 1: Adicionar Feriado -->
         <div class="card" style="width: 100%; max-width: 800px; background-color: #fff; padding: 2rem; border-radius: 8px; box-shadow: 0 4px 10px rgba(0,0,0,0.1); box-sizing: border-box; margin-bottom: 2rem;">
@@ -84,12 +68,13 @@
                             <td style="padding: 1rem; color: #333;" th:text="${#temporals.format(feriadoItem.data, 'dd/MM/yyyy')}">25/12/2026</td>
                             <td style="padding: 1rem; color: #333;" th:text="${feriadoItem.descricao}">Natal</td>
                             <td style="padding: 1rem; text-align: center;">
-                                <a th:href="@{/admin/feriados/excluir/{id}(id=${feriadoItem.id})}" 
-                                   onclick="return confirm('Tem certeza que deseja EXCLUIR este feriado da escala?');"
-                                   class="btn-primary" 
-                                   style="background-color: #E74C3C; font-size: 0.85rem; padding: 0.5rem 1rem; text-decoration: none; display: inline-block; border-radius: 6px; font-weight: 500;">
-                                    Excluir
-                                </a>
+                                <form th:action="@{/admin/feriados/excluir/{id}(id=${feriadoItem.id})}" method="post" style="margin: 0;"
+                                      onsubmit="return confirm('Tem certeza que deseja EXCLUIR este feriado da escala?');">
+                                    <button type="submit" class="btn-primary"
+                                            style="background-color: #E74C3C; font-size: 0.85rem; padding: 0.5rem 1rem; border-radius: 6px; font-weight: 500;">
+                                        Excluir
+                                    </button>
+                                </form>
                             </td>
                         </tr>
                         <tr th:if="${#lists.isEmpty(feriados)}">
@@ -105,11 +90,6 @@
     </div>
     
     <!-- Rodapé cravado no fundo -->
-    <footer style="text-align: center; padding: 20px; background-color: #f1f1f1; width: 100%; box-sizing: border-box;">
-        <p style="margin: 0; color: #333; font-size: 0.9rem;">
-            Sistema de Escala Militar &copy; 2026 <br>
-            Desenvolvido com Java por <a href="https://www.linkedin.com/in/paulo-henrique-517268269" target="_blank" style="color: #1a73e8; text-decoration: none;"><strong>Cb Tomaz</strong></a>
-        </p>
-    </footer>
+    <footer th:replace="~{fragments/layout :: rodape}"></footer>
 </body>
 </html>
