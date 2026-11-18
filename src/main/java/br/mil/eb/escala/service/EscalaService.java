@@ -50,38 +50,45 @@ public class EscalaService {
     @Autowired private EscalaFixadaRepository escalaFixadaRepository;
 
     public List<Militar> getMilitaresOrdenadosParaEscala() {
-        LocalDate hoje = LocalDate.now();
-        LocalDate ontem = hoje.minusDays(1);
+        return getMilitaresOrdenadosParaEscala(LocalDate.now());
+    }
+
+    // Fila do dia: aptos, fora de quem o ADM afastou por missão e de quem saiu de serviço na véspera
+    private List<Militar> getMilitaresOrdenadosParaEscala(LocalDate dia) {
+        LocalDate vespera = dia.minusDays(1);
         List<Militar> todos = militarRepository.findAll();
         // Missão só tira da permanência quando o ADM marcou "afastar da permanência"
-        Set<Long> afastadosPorMissao = missaoService.idsAfastadosPorMissao(hoje);
+        Set<Long> afastadosPorMissao = missaoService.idsAfastadosPorMissao(dia);
         
         return todos.stream()
-                .filter(m -> m.estaAptoParaServico(hoje))
+                .filter(m -> m.estaAptoParaServico(dia))
                 .filter(m -> !afastadosPorMissao.contains(m.getId()))
-                .filter(m -> m.getDataUltimoServico() == null || !m.getDataUltimoServico().equals(ontem)) 
+                .filter(m -> m.getDataUltimoServico() == null || !m.getDataUltimoServico().equals(vespera)) 
                 .sorted(Comparator.comparing(Militar::getFolga).reversed()
                         .thenComparing(Militar::getDataUltimoServico, Comparator.nullsFirst(Comparator.naturalOrder())))
                 .collect(Collectors.toList());
     }
 
-    // MÉTODO CORRIGIDO: Prioriza quem foi escalado manualmente para hoje
+    // Prioriza quem foi escalado manualmente para hoje (troca), depois o fixado no mapa, depois a fila
     public Militar getProximoPermanencia() {
-        LocalDate hoje = LocalDate.now();
+        return getTitularDoDia(LocalDate.now());
+    }
+
+    private Militar getTitularDoDia(LocalDate dia) {
         List<Militar> todos = militarRepository.findAll();
         
-        Militar trocadoParaHoje = todos.stream()
-                .filter(m -> m.getDataUltimoServico() != null && m.getDataUltimoServico().isEqual(hoje))
+        Militar trocadoParaODia = todos.stream()
+                .filter(m -> m.getDataUltimoServico() != null && m.getDataUltimoServico().isEqual(dia))
                 .findFirst()
                 .orElse(null);
             
-        if (trocadoParaHoje != null) return trocadoParaHoje;
+        if (trocadoParaODia != null) return trocadoParaODia;
 
-        // Militar fixado pelo ADM no mapa para hoje (se continuar disponível)
-        Militar fixado = getFixadoValido(hoje, PapelEscala.TITULAR);
+        // Militar fixado pelo ADM no mapa para o dia (se continuar disponível)
+        Militar fixado = getFixadoValido(dia, PapelEscala.TITULAR);
         if (fixado != null) return fixado;
 
-        List<Militar> ordenados = getMilitaresOrdenadosParaEscala(); 
+        List<Militar> ordenados = getMilitaresOrdenadosParaEscala(dia); 
         return ordenados.isEmpty() ? null : ordenados.get(0);
     }
     
@@ -139,29 +146,23 @@ public class EscalaService {
     }
 
     /**
-     * Fechamento do dia (23h55): se nenhum militar foi registrado no serviço de hoje
-     * (troca ou data salva pelo ADM), registra quem a escala apontou como titular.
-     * Sem isso, se o ADM esquecesse de salvar a data, o titular não zerava a folga
-     * à meia-noite e caía de novo no topo da escala no dia seguinte.
+     * Registra quem tirou o serviço do dia que terminou, se ninguém foi registrado
+     * (troca ou data salva pelo ADM). Roda no começo da virada da meia-noite, antes das folgas,
+     * ainda com o estado daquele dia. Sem isso, se o ADM esquecesse de salvar a data,
+     * o titular não zerava a folga e caía de novo no topo da escala.
      */
-    @Scheduled(cron = "0 55 23 * * *", zone = "America/Sao_Paulo")
-    @Transactional
-    public void registrarServicoDoDia() {
-        LocalDate hoje = LocalDate.now();
-        if (!isDiaUtil(hoje)) return; // fim de semana e feriado não têm permanência
-
-        boolean jaRegistrado = militarRepository.findAll().stream()
-                .anyMatch(m -> hoje.equals(m.getDataUltimoServico()));
+    private void registrarServicoDe(LocalDate dia, List<Militar> todos) {
+        if (!isDiaUtil(dia)) return; // fim de semana e feriado não têm permanência
+        boolean jaRegistrado = todos.stream().anyMatch(m -> dia.equals(m.getDataUltimoServico()));
         if (jaRegistrado) return;
 
-        Militar titular = getProximoPermanencia();
+        Militar titular = getTitularDoDia(dia);
         if (titular != null) {
-            titular.setDataUltimoServico(hoje);
-            militarRepository.save(titular);
-            log.info("Serviço de {} registrado automaticamente para {} {}", hoje,
+            titular.setDataUltimoServico(dia);
+            log.info("Serviço de {} registrado automaticamente para {} {}", dia,
                     titular.getGraduacao(), titular.getNomeGuerra());
         } else {
-            log.warn("Nenhum militar disponível para a permanência de {}", hoje);
+            log.warn("Nenhum militar disponível para a permanência de {}", dia);
         }
     }
 
@@ -174,6 +175,9 @@ public class EscalaService {
         boolean ehDiaDeServico = isDiaUtil(ontem); // Verifica se o dia que passou foi útil
         
         List<Militar> todos = militarRepository.findAll();
+
+        // Quem tirou o serviço de ontem fica registrado antes de calcular as folgas
+        registrarServicoDe(ontem, todos);
 
         for (Militar m : todos) {
             // Reativar afastamentos vencidos: só no dia SEGUINTE ao fim
@@ -365,10 +369,6 @@ public class EscalaService {
         if (!isDiaUtil(hoje)) return "Hoje não tem permanência (fim de semana ou feriado).";
         Militar titular = getTitularOriginalDeHoje();
         if (titular == null) return "Não há titular escalado hoje.";
-        if (getTrocasDoServicoDeHoje().isEmpty() && hoje.equals(titular.getDataUltimoServico())) {
-            return "O serviço de hoje foi registrado manualmente para " + titular.getGraduacao() + " "
-                    + titular.getNomeGuerra() + " (pela data do último serviço). Corrija a data dele no painel antes de trocar.";
-        }
         return null;
     }
 
@@ -396,6 +396,12 @@ public class EscalaService {
         LocalDate hoje = LocalDate.now();
         Militar titularOriginal = getTitularOriginalDeHoje();
         boolean servicoDeHoje = idSai.equals(titularOriginal.getId());
+
+        if (servicoDeHoje && getTrocasDoServicoDeHoje().isEmpty() && hoje.equals(titularOriginal.getDataUltimoServico())) {
+            // A data de hoje foi salva na mão no painel: não dá para saber como ele estava antes
+            throw new RegraNegocioException("O serviço de hoje de " + titularOriginal.getGraduacao() + " " + titularOriginal.getNomeGuerra()
+                    + " foi lançado pela data no painel. Corrija a data dele no painel antes de trocá-lo.");
+        }
 
         if (servicoDeHoje) {
             // Desfaz a(s) troca(s) anterior(es) do serviço de hoje: quem tinha entrado volta como estava

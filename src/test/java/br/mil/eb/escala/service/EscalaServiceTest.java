@@ -206,27 +206,44 @@ class EscalaServiceTest {
     }
 
     @Test
-    void fechamentoDoDiaRegistraOTitularQuandoNinguemFoiRegistrado() {
-        DayOfWeek dia = hoje.getDayOfWeek();
-        assumeTrue(dia != DayOfWeek.SATURDAY && dia != DayOfWeek.SUNDAY, "só faz sentido em dia útil");
+    void viradaRegistraOTitularDeOntemQuandoNinguemFoiRegistrado() {
+        DayOfWeek ontem = hoje.minusDays(1).getDayOfWeek();
+        assumeTrue(ontem != DayOfWeek.SATURDAY && ontem != DayOfWeek.SUNDAY, "ontem precisa ser dia útil");
 
-        Militar alves = militar(1, "Alves", 9, hoje.minusDays(9));
-        militar(2, "Barros", 5, hoje.minusDays(5));
+        // Estado de ontem: Alves era o mais folgado e ninguém salvou a data dele
+        Militar alves = militar(1, "Alves", 9, hoje.minusDays(10));
+        Militar barros = militar(2, "Barros", 5, hoje.minusDays(6));
 
-        escalaService.registrarServicoDoDia();
+        escalaService.avancarDiaDaEscala();
 
-        assertEquals(hoje, alves.getDataUltimoServico());
-        verify(militarRepository).save(alves);
+        assertEquals(hoje.minusDays(1), alves.getDataUltimoServico());
+        assertEquals(0, alves.getFolga());
+        assertEquals(6, barros.getFolga());
     }
 
     @Test
-    void fechamentoDoDiaRespeitaTrocaJaRegistrada() {
-        militar(1, "Alves", 9, hoje.minusDays(9));
-        militar(2, "Barros", 5, hoje); // ADM já colocou o Barros hoje
+    void viradaRespeitaQuemJaFoiRegistradoOntem() {
+        DayOfWeek ontem = hoje.minusDays(1).getDayOfWeek();
+        assumeTrue(ontem != DayOfWeek.SATURDAY && ontem != DayOfWeek.SUNDAY, "ontem precisa ser dia útil");
 
-        escalaService.registrarServicoDoDia();
+        Militar alves = militar(1, "Alves", 9, hoje.minusDays(10));
+        Militar barros = militar(2, "Barros", 5, hoje.minusDays(1)); // troca: Barros tirou ontem
 
-        verify(militarRepository, never()).save(any());
+        escalaService.avancarDiaDaEscala();
+
+        assertEquals(10, alves.getFolga());
+        assertEquals(0, barros.getFolga());
+    }
+
+    @Test
+    void trocaFuncionaAteAMeiaNoite() {
+        assumeTrue(hojeEhDiaUtil());
+        comBusca(militar(1, "Alves", 9, hoje.minusDays(9)));
+        Militar barros = comBusca(militar(2, "Barros", 5, hoje.minusDays(5)));
+
+        assertNull(escalaService.motivoParaNaoTrocarHoje());
+        escalaService.processarTroca(1L, 2L, TipoTroca.MISSAO, "adm");
+        assertEquals(barros, escalaService.getProximoPermanencia());
     }
 
     @Test
