@@ -89,7 +89,7 @@
             background: #fff; border: 1px solid var(--borda);
             font-size: 0.86rem; font-weight: 600;
         }
-        .escalado + .escalado { margin-top: 0.35rem; }
+        .escalado + .escalado, .slot + .slot { margin-top: 0.35rem; }
         .escalado .papel {
             flex-shrink: 0; width: 22px; height: 22px; display: grid; place-items: center;
             border-radius: 6px; font-size: 0.66rem; font-weight: 800;
@@ -125,6 +125,58 @@
         }
         .chip.externo { background: rgba(217, 130, 43, 0.15); color: #A65C12; }
 
+        /* ---------- Modo edição (ADM) ---------- */
+        .botao-editar {
+            display: inline-flex; align-items: center; gap: 0.4rem; padding: 0.55rem 0.9rem; border-radius: 999px;
+            border: 1px solid var(--latao); background: rgba(201,165,76,0.15); color: var(--latao-claro);
+            font: 600 0.88rem var(--fonte); cursor: pointer;
+        }
+        .botao-editar.ativo { background: var(--latao); color: var(--oliva-900); }
+        .fixado { display: none; margin-left: auto; color: #8A6A1C; font-size: 0.75rem; }
+        .modo-edicao .fixado { display: inline; }
+        .em-missao + .fixado { margin-left: 0.3rem; }
+
+        .painel-efetivo {
+            position: sticky; top: 70px; z-index: 50; margin-bottom: 1rem; padding: 0.9rem 1rem;
+            border-radius: var(--raio); background: rgba(18,22,15,0.94); border: 1px solid rgba(201,165,76,0.45);
+            box-shadow: var(--sombra); color: rgba(255,255,255,0.85);
+        }
+        .painel-efetivo-topo { display: flex; flex-direction: column; gap: 0.2rem; margin-bottom: 0.7rem; font-size: 0.85rem; }
+        .painel-efetivo-topo b { color: var(--latao-claro); }
+        .painel-efetivo-topo span { color: rgba(255,255,255,0.6); font-size: 0.8rem; }
+        .painel-efetivo-topo a { color: var(--latao-claro); }
+        .efetivo-lista { display: flex; flex-wrap: wrap; gap: 0.4rem; max-height: 120px; overflow-y: auto; }
+        .chip-efetivo {
+            display: inline-flex; align-items: center; gap: 0.4rem; padding: 0.35rem 0.65rem; border-radius: 8px;
+            background: #fff; color: var(--texto); font-size: 0.82rem; font-weight: 600; cursor: grab; user-select: none;
+        }
+        .chip-efetivo i { color: #A0A694; font-size: 0.75rem; }
+        .chip-efetivo.indisponivel { opacity: 0.5; }
+        .chip-efetivo:active { cursor: grabbing; }
+
+        .modo-edicao .slot[data-editavel="true"] {
+            min-height: 38px; border-radius: 10px; border: 1.5px dashed #C7CBB8; padding: 2px; transition: background-color .15s, border-color .15s;
+        }
+        .modo-edicao .slot[data-editavel="true"] + .slot { margin-top: 0.35rem; }
+        .modo-edicao .slot[data-editavel="true"] .escalado { cursor: grab; margin: 0; }
+        .modo-edicao .slot.alvo { border-color: var(--oliva-500); background: rgba(85,107,47,0.12); }
+        .modo-edicao .slot[data-editavel="false"] { opacity: 0.6; }
+        .escalado.pendente { border-color: var(--latao); background: #FFF8E6; }
+        .slot-auto { display: flex; align-items: center; gap: 0.4rem; padding: 0.45rem 0.55rem; font-size: 0.78rem; color: var(--texto-suave); font-style: italic; }
+        .remover-vaga { display: none; margin-left: auto; border: none; background: none; color: #A8322C; cursor: pointer; padding: 0 0.15rem; font-size: 0.8rem; }
+        .modo-edicao .slot[data-editavel="true"] .remover-vaga { display: inline; }
+
+        .barra-salvar {
+            position: fixed; left: 50%; bottom: 1.25rem; transform: translateX(-50%); z-index: 100;
+            display: flex; align-items: center; gap: 0.75rem; padding: 0.7rem 0.8rem 0.7rem 1.1rem;
+            border-radius: 999px; background: var(--oliva-900); border: 1px solid var(--latao);
+            box-shadow: 0 20px 40px rgba(0,0,0,0.5); color: #fff; font-size: 0.9rem;
+        }
+        .barra-salvar .btn-primary { border-radius: 999px !important; }
+        .botao-descartar { border: 1px solid rgba(255,255,255,0.25); background: none; color: #fff; border-radius: 999px; padding: 0.55rem 0.9rem; cursor: pointer; font: 600 0.85rem var(--fonte); }
+        .aviso-mapa { position: fixed; left: 50%; bottom: 5.2rem; transform: translateX(-50%); z-index: 100; padding: 0.6rem 1rem;
+            border-radius: 10px; background: #A8322C; color: #fff; font-size: 0.88rem; box-shadow: var(--sombra); }
+
         .resumo-semana { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 1rem; margin-bottom: 1.25rem; }
         .resumo-semana div {
             padding: 0.9rem 1.1rem; border-radius: 12px; color: rgba(255,255,255,0.7);
@@ -152,10 +204,38 @@
                       th:text="${#temporals.format(segunda, 'dd/MM') + ' a ' + #temporals.format(domingo, 'dd/MM')}">17/11 a 23/11</span>
                 <a th:if="${semana != 0}" th:href="@{/mapa}"><i class="fas fa-calendar-day"></i> Esta semana</a>
                 <a th:href="@{/mapa(semana=${semana + 1})}">Próxima <i class="fas fa-chevron-right"></i></a>
+                <button sec:authorize="hasRole('ADM')" type="button" id="botao-editar" class="botao-editar">
+                    <i class="fas fa-pen-to-square"></i> <span>Editar escala</span>
+                </button>
             </nav>
         </section>
 
+        <div th:replace="~{fragments/layout :: mensagens}"></div>
+
         <section th:replace="~{fragments/layout :: alertaUltimaHora(${ultimaHora})}"></section>
+
+        <!-- Modo edição: o ADM arrasta militares para os dias (de amanhã em diante) -->
+        <section sec:authorize="hasRole('ADM')" class="painel-efetivo" id="painel-efetivo" hidden>
+            <div class="painel-efetivo-topo">
+                <strong><i class="fas fa-hand-pointer"></i> Arraste um militar para a vaga de <b>T</b> (titular) ou <b>R</b> (reserva) de um dia.</strong>
+                <span>Também dá para arrastar de um dia para outro. O <i class="fas fa-xmark"></i> devolve a vaga para a escala automática. Hoje se altera pela tela de <a th:href="@{/admin/troca}">Trocas</a>.</span>
+            </div>
+            <div class="efetivo-lista">
+                <span th:each="m : ${efetivo}" class="chip-efetivo" draggable="true"
+                      th:classappend="${m.status != 'APTO'} ? 'indisponivel'"
+                      th:attr="data-id=${m.id},data-nome=${m.graduacao + ' ' + m.nomeGuerra}"
+                      th:title="${m.status != 'APTO'} ? ${m.status} : ${'Folga ' + m.folga}">
+                    <i class="fas fa-grip-vertical"></i> <th:block th:text="${m.graduacao + ' ' + m.nomeGuerra}">Cb Duarte</th:block>
+                </span>
+            </div>
+        </section>
+
+        <form sec:authorize="hasRole('ADM')" id="form-ajustes" th:action="@{/admin/mapa/salvar}" method="post" class="barra-salvar" hidden>
+            <input type="hidden" name="semana" th:value="${semana}">
+            <span id="contador-pendentes"><i class="fas fa-pen"></i> 0 alterações</span>
+            <button type="button" id="botao-descartar" class="botao-descartar">Descartar</button>
+            <button type="submit" class="btn-primary"><i class="fas fa-floppy-disk"></i> Salvar alterações</button>
+        </form>
 
         <section class="resumo-semana">
             <div><strong th:text="${totalMissoes}">3</strong> Missões na semana</div>
@@ -189,18 +269,26 @@
                         <div class="bloco-titulo"><i class="fas fa-shield-halved"></i> Permanência</div>
                         <div th:if="${dia.feriado != null}" class="feriado-nome" th:text="${dia.feriado}">Feriado</div>
                         <th:block th:if="${dia.expediente}">
-                            <div class="escalado" th:if="${dia.titular != null}">
-                                <span class="papel">T</span>
-                                <span class="nome" th:text="${dia.titular.graduacao + ' ' + dia.titular.nomeGuerra}">Sgt Alves</span>
-                                <i th:if="${dia.titularEmMissao}" class="fas fa-crosshairs em-missao" title="Também está numa missão neste dia"></i>
+                            <div class="slot" th:attr="data-data=${dia.data},data-papel='TITULAR',data-editavel=${dia.editavel}">
+                                <div class="escalado" th:if="${dia.titular != null}"
+                                     th:attr="data-id=${dia.titular.id},data-nome=${dia.titular.graduacao + ' ' + dia.titular.nomeGuerra}">
+                                    <span class="papel">T</span>
+                                    <span class="nome" th:text="${dia.titular.graduacao + ' ' + dia.titular.nomeGuerra}">Sgt Alves</span>
+                                    <i th:if="${dia.titularEmMissao}" class="fas fa-crosshairs em-missao" title="Também está numa missão neste dia"></i>
+                                    <i sec:authorize="hasRole('ADM')" th:if="${dia.titularFixado}" class="fas fa-thumbtack fixado" title="Fixado pelo ADM"></i>
+                                </div>
+                                <div class="sem-permanencia" th:if="${dia.titular == null}"
+                                     th:text="${dia.passado ? 'Sem registro' : 'Ninguém disponível'}">Sem registro</div>
                             </div>
-                            <div class="escalado reserva" th:if="${dia.reserva != null}">
-                                <span class="papel">R</span>
-                                <span class="nome" th:text="${dia.reserva.graduacao + ' ' + dia.reserva.nomeGuerra}">Sgt Barros</span>
-                                <i th:if="${dia.reservaEmMissao}" class="fas fa-crosshairs em-missao" title="Também está numa missão neste dia"></i>
+                            <div class="slot" th:attr="data-data=${dia.data},data-papel='RESERVA',data-editavel=${dia.editavel}">
+                                <div class="escalado reserva" th:if="${dia.reserva != null}"
+                                     th:attr="data-id=${dia.reserva.id},data-nome=${dia.reserva.graduacao + ' ' + dia.reserva.nomeGuerra}">
+                                    <span class="papel">R</span>
+                                    <span class="nome" th:text="${dia.reserva.graduacao + ' ' + dia.reserva.nomeGuerra}">Sgt Barros</span>
+                                    <i th:if="${dia.reservaEmMissao}" class="fas fa-crosshairs em-missao" title="Também está numa missão neste dia"></i>
+                                    <i sec:authorize="hasRole('ADM')" th:if="${dia.reservaFixado}" class="fas fa-thumbtack fixado" title="Fixado pelo ADM"></i>
+                                </div>
                             </div>
-                            <div class="sem-permanencia" th:if="${dia.titular == null}"
-                                 th:text="${dia.passado ? 'Sem registro' : 'Ninguém disponível'}">Sem registro</div>
                         </th:block>
                         <div class="sem-permanencia" th:if="${!dia.expediente}">Sem expediente</div>
                     </div>
@@ -268,5 +356,176 @@
     </main>
 
     <footer th:replace="~{fragments/layout :: rodape}"></footer>
+
+    <script sec:authorize="hasRole('ADM')">
+    (function () {
+        var botao = document.getElementById('botao-editar');
+        var painel = document.getElementById('painel-efetivo');
+        var form = document.getElementById('form-ajustes');
+        var contador = document.getElementById('contador-pendentes');
+        if (!botao || !painel || !form) return;
+
+        var pendentes = {};   // "aaaa-mm-dd|PAPEL" -> id do militar ("" = volta ao automático)
+        var arrastando = null; // { id, nome, origem: slot ou null }
+
+        function chave(slot) { return slot.dataset.data + '|' + slot.dataset.papel; }
+        function editavel(slot) { return slot && slot.dataset.editavel === 'true'; }
+        function total() { return Object.keys(pendentes).length; }
+
+        function atualizarBarra() {
+            var n = total();
+            contador.innerHTML = '<i class="fas fa-pen"></i> ' + n + (n === 1 ? ' alteração' : ' alterações');
+            form.hidden = n === 0;
+        }
+
+        function avisar(texto) {
+            var aviso = document.createElement('div');
+            aviso.className = 'aviso-mapa';
+            aviso.textContent = texto;
+            document.body.appendChild(aviso);
+            setTimeout(function () { aviso.remove(); }, 3500);
+        }
+
+        function botaoRemover() {
+            var b = document.createElement('button');
+            b.type = 'button';
+            b.className = 'remover-vaga';
+            b.title = 'Voltar para a escala automática';
+            b.innerHTML = '<i class="fas fa-xmark"></i>';
+            return b;
+        }
+
+        function preencher(slot, id, nome) {
+            var papel = slot.dataset.papel;
+            slot.innerHTML = '';
+            var div = document.createElement('div');
+            div.className = 'escalado pendente' + (papel === 'RESERVA' ? ' reserva' : '');
+            div.dataset.id = id;
+            div.dataset.nome = nome;
+            div.draggable = true;
+            div.innerHTML = '<span class="papel">' + (papel === 'TITULAR' ? 'T' : 'R') + '</span>';
+            var span = document.createElement('span');
+            span.className = 'nome';
+            span.textContent = nome;
+            div.appendChild(span);
+            div.appendChild(botaoRemover());
+            slot.appendChild(div);
+        }
+
+        function automatico(slot) {
+            slot.innerHTML = '<div class="slot-auto"><i class="fas fa-rotate"></i> Automático (recalcula ao salvar)</div>';
+        }
+
+        // Prepara as vagas editáveis: militares arrastáveis + botão de remover
+        document.querySelectorAll('.slot[data-editavel="true"] .escalado').forEach(function (e) {
+            e.draggable = true;
+            e.appendChild(botaoRemover());
+        });
+
+        // Liga/desliga o modo edição
+        botao.addEventListener('click', function () {
+            var ativo = document.body.classList.toggle('modo-edicao');
+            botao.classList.toggle('ativo', ativo);
+            botao.querySelector('span').textContent = ativo ? 'Sair da edição' : 'Editar escala';
+            painel.hidden = !ativo;
+            if (!ativo && total() > 0) avisar('Você tem alterações não salvas.');
+        });
+
+        document.addEventListener('dragstart', function (ev) {
+            if (!document.body.classList.contains('modo-edicao')) return;
+            var chip = ev.target.closest && ev.target.closest('.chip-efetivo, .slot[data-editavel="true"] .escalado');
+            if (!chip) return;
+            arrastando = {
+                id: chip.dataset.id,
+                nome: chip.dataset.nome,
+                origem: chip.classList.contains('escalado') ? chip.closest('.slot') : null
+            };
+            ev.dataTransfer.effectAllowed = 'move';
+            ev.dataTransfer.setData('text/plain', chip.dataset.id);
+        });
+
+        document.addEventListener('dragend', function () {
+            arrastando = null;
+            document.querySelectorAll('.slot.alvo').forEach(function (s) { s.classList.remove('alvo'); });
+        });
+
+        document.addEventListener('dragover', function (ev) {
+            if (!arrastando) return;
+            var slot = ev.target.closest && ev.target.closest('.slot');
+            if (!editavel(slot)) return;
+            ev.preventDefault();
+            ev.dataTransfer.dropEffect = 'move';
+            document.querySelectorAll('.slot.alvo').forEach(function (s) { if (s !== slot) s.classList.remove('alvo'); });
+            slot.classList.add('alvo');
+        });
+
+        document.addEventListener('drop', function (ev) {
+            if (!arrastando) return;
+            var slot = ev.target.closest && ev.target.closest('.slot');
+            if (!editavel(slot)) return;
+            ev.preventDefault();
+            slot.classList.remove('alvo');
+            if (arrastando.origem === slot) return;
+
+            // Mesmo militar já está na outra vaga do mesmo dia?
+            var dia = slot.closest('.dia-corpo');
+            var outra = Array.prototype.find.call(dia.querySelectorAll('.slot'), function (s) { return s !== slot; });
+            var naOutra = outra && outra.querySelector('.escalado');
+            if (naOutra && naOutra.dataset.id === arrastando.id && outra !== arrastando.origem) {
+                avisar(arrastando.nome + ' já está neste dia. Um militar não pode ser titular e reserva no mesmo dia.');
+                return;
+            }
+
+            preencher(slot, arrastando.id, arrastando.nome);
+            pendentes[chave(slot)] = arrastando.id;
+
+            // Arrastou de outro dia: a vaga de origem volta para o automático
+            if (arrastando.origem) {
+                automatico(arrastando.origem);
+                pendentes[chave(arrastando.origem)] = '';
+            }
+            atualizarBarra();
+        });
+
+        // "x": devolve a vaga para a escala automática
+        document.addEventListener('click', function (ev) {
+            var remover = ev.target.closest && ev.target.closest('.remover-vaga');
+            if (!remover) return;
+            var slot = remover.closest('.slot');
+            automatico(slot);
+            pendentes[chave(slot)] = '';
+            atualizarBarra();
+        });
+
+        document.getElementById('botao-descartar').addEventListener('click', function () {
+            pendentes = {};
+            window.location.reload();
+        });
+
+        form.addEventListener('submit', function () {
+            form.querySelectorAll('input[name="ajustes"]').forEach(function (i) { i.remove(); });
+            Object.keys(pendentes).forEach(function (k) {
+                var input = document.createElement('input');
+                input.type = 'hidden';
+                input.name = 'ajustes';
+                input.value = k + '|' + pendentes[k];
+                form.appendChild(input);
+            });
+            pendentes = {}; // para o aviso de "sair sem salvar" não disparar
+        });
+
+        window.addEventListener('beforeunload', function (ev) {
+            if (total() > 0) { ev.preventDefault(); ev.returnValue = ''; }
+        });
+
+        // Depois de salvar, volta já no modo edição
+        try {
+            if (sessionStorage.getItem('mapa-editando') === '1') botao.click();
+            botao.addEventListener('click', function () {
+                sessionStorage.setItem('mapa-editando', document.body.classList.contains('modo-edicao') ? '1' : '0');
+            });
+        } catch (e) { /* navegador sem sessionStorage: segue sem lembrar */ }
+    })();
+    </script>
 </body>
 </html>

@@ -8,6 +8,7 @@ import br.mil.eb.escala.model.Perfil;
 import br.mil.eb.escala.model.PrioridadeAviso;
 import br.mil.eb.escala.model.Usuario;
 import br.mil.eb.escala.repository.AvisoRepository;
+import br.mil.eb.escala.repository.EscalaFixadaRepository;
 import br.mil.eb.escala.repository.FeriadoRepository;
 import br.mil.eb.escala.repository.MilitarRepository;
 import br.mil.eb.escala.repository.MissaoRepository;
@@ -50,6 +51,7 @@ public class DemoDataLoader implements CommandLineRunner {
     private final AvisoRepository avisoRepository;
     private final MissaoRepository missaoRepository;
     private final TrocaRepository trocaRepository;
+    private final EscalaFixadaRepository escalaFixadaRepository;
 
     public DemoDataLoader(MilitarRepository militarRepository,
                           FeriadoRepository feriadoRepository,
@@ -57,7 +59,8 @@ public class DemoDataLoader implements CommandLineRunner {
                           PasswordEncoder passwordEncoder,
                           AvisoRepository avisoRepository,
                           MissaoRepository missaoRepository,
-                          TrocaRepository trocaRepository) {
+                          TrocaRepository trocaRepository,
+                          EscalaFixadaRepository escalaFixadaRepository) {
         this.militarRepository = militarRepository;
         this.feriadoRepository = feriadoRepository;
         this.usuarioRepository = usuarioRepository;
@@ -65,6 +68,7 @@ public class DemoDataLoader implements CommandLineRunner {
         this.avisoRepository = avisoRepository;
         this.missaoRepository = missaoRepository;
         this.trocaRepository = trocaRepository;
+        this.escalaFixadaRepository = escalaFixadaRepository;
     }
 
     @Override
@@ -82,6 +86,7 @@ public class DemoDataLoader implements CommandLineRunner {
         missaoRepository.deleteAll();   // apaga também a tabela de ligação com os militares
         missaoRepository.flush();
         trocaRepository.deleteAllInBatch();   // antes dos militares (referência)
+        escalaFixadaRepository.deleteAllInBatch();
         avisoRepository.deleteAllInBatch();
         militarRepository.deleteAllInBatch();
         feriadoRepository.deleteAllInBatch();

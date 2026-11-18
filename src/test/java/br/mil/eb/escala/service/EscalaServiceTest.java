@@ -2,11 +2,14 @@ package br.mil.eb.escala.service;
 
 import br.mil.eb.escala.dto.DiaEscala;
 import br.mil.eb.escala.exception.RegraNegocioException;
+import br.mil.eb.escala.model.EscalaFixada;
 import br.mil.eb.escala.model.Militar;
+import br.mil.eb.escala.model.PapelEscala;
 import br.mil.eb.escala.model.Perfil;
 import br.mil.eb.escala.model.TipoTroca;
 import br.mil.eb.escala.model.Troca;
 import br.mil.eb.escala.model.Usuario;
+import br.mil.eb.escala.repository.EscalaFixadaRepository;
 import br.mil.eb.escala.repository.FeriadoRepository;
 import br.mil.eb.escala.repository.MilitarRepository;
 import br.mil.eb.escala.repository.TrocaRepository;
@@ -44,6 +47,7 @@ class EscalaServiceTest {
     @Mock private PasswordEncoder passwordEncoder;
     @Mock private MissaoService missaoService;
     @Mock private TrocaRepository trocaRepository;
+    @Mock private EscalaFixadaRepository escalaFixadaRepository;
 
     @InjectMocks private EscalaService escalaService;
 
@@ -58,6 +62,9 @@ class EscalaServiceTest {
         when(missaoService.missoesDoPeriodo(any(), any())).thenReturn(List.of());
         when(feriadoRepository.existsByData(any())).thenReturn(false);
         when(feriadoRepository.findAll()).thenReturn(List.of());
+
+        when(escalaFixadaRepository.findByDataAndPapel(any(), any())).thenReturn(Optional.empty());
+        when(escalaFixadaRepository.findByDataBetween(any(), any())).thenReturn(List.of());
 
         // Repositório de trocas simulado em memória
         when(trocaRepository.save(any())).thenAnswer(inv -> {
@@ -397,6 +404,96 @@ class EscalaServiceTest {
         assertFalse(alves.isPagouServico());
         assertEquals(6, barros.getFolga());               // não zerou: ganhou +1
         assertFalse(barros.isServicoPagoTemporario());
+    }
+
+    // ======================= MAPA (arrastar e soltar) =======================
+
+    private EscalaFixada fixada(LocalDate data, PapelEscala papel, Militar m) {
+        EscalaFixada f = new EscalaFixada();
+        f.setData(data);
+        f.setPapel(papel);
+        f.setMilitar(m);
+        return f;
+    }
+
+    @Test
+    void militarFixadoNoMapaEhOTitularDoDia() {
+        militar(1, "Alves", 9, hoje.minusDays(9));
+        militar(2, "Barros", 5, hoje.minusDays(5));
+        Militar cardoso = militar(3, "Cardoso", 1, hoje.minusDays(1));
+
+        LocalDate segunda = hoje.with(DayOfWeek.MONDAY).plusWeeks(1);
+        LocalDate quarta = segunda.plusDays(2);
+        when(escalaFixadaRepository.findByDataBetween(any(), any()))
+                .thenReturn(List.of(fixada(quarta, PapelEscala.TITULAR, cardoso)));
+
+        List<DiaEscala> semana = escalaService.projetarSemana(segunda);
+
+        assertEquals(cardoso, semana.get(2).getTitular());
+        assertTrue(semana.get(2).isTitularFixado());
+        assertNotEquals(cardoso, semana.get(2).getReserva());
+        assertNotEquals(cardoso, semana.get(3).getTitular()); // quem tirou na quarta não tira na quinta
+    }
+
+    @Test
+    void fixadoParaHojeValeNoPainel() {
+        militar(1, "Alves", 9, hoje.minusDays(9));
+        Militar cardoso = militar(3, "Cardoso", 1, hoje.minusDays(3));
+        when(escalaFixadaRepository.findByDataAndPapel(hoje, PapelEscala.TITULAR))
+                .thenReturn(Optional.of(fixada(hoje, PapelEscala.TITULAR, cardoso)));
+
+        assertEquals(cardoso, escalaService.getProximoPermanencia());
+        assertEquals("Alves", escalaService.getProximoSubstituto().getNomeGuerra());
+    }
+
+    @Test
+    void mapaNaoAlteraHojeNemFimDeSemana() {
+        militar(1, "Alves", 9, hoje.minusDays(9));
+        when(militarRepository.findById(1L)).thenReturn(Optional.of(militares.get(0)));
+        LocalDate sabado = hoje.with(DayOfWeek.SATURDAY).plusWeeks(1);
+
+        assertThrows(RegraNegocioException.class,
+                () -> escalaService.salvarAjustesDoMapa(List.of(hoje + "|TITULAR|1"), "adm"));
+        assertThrows(RegraNegocioException.class,
+                () -> escalaService.salvarAjustesDoMapa(List.of(sabado + "|TITULAR|1"), "adm"));
+        verify(escalaFixadaRepository, never()).save(any());
+    }
+
+    @Test
+    void mapaRecusaMesmoMilitarComoTitularEReserva() {
+        militar(1, "Alves", 9, hoje.minusDays(9));
+        when(militarRepository.findById(1L)).thenReturn(Optional.of(militares.get(0)));
+        LocalDate terca = hoje.with(DayOfWeek.TUESDAY).plusWeeks(1);
+
+        assertThrows(RegraNegocioException.class, () -> escalaService.salvarAjustesDoMapa(
+                List.of(terca + "|TITULAR|1", terca + "|RESERVA|1"), "adm"));
+    }
+
+    @Test
+    void mapaRecusaMilitarAfastadoNoDia() {
+        Militar alves = militar(1, "Alves", 9, hoje.minusDays(9));
+        LocalDate terca = hoje.with(DayOfWeek.TUESDAY).plusWeeks(1);
+        alves.setDataInicioAfastamento(terca.minusDays(1));
+        alves.setDataFimAfastamento(terca.plusDays(3));
+        when(militarRepository.findById(1L)).thenReturn(Optional.of(alves));
+
+        assertThrows(RegraNegocioException.class,
+                () -> escalaService.salvarAjustesDoMapa(List.of(terca + "|TITULAR|1"), "adm"));
+    }
+
+    @Test
+    void mapaGravaEDevolveParaOAutomatico() {
+        militar(1, "Alves", 9, hoje.minusDays(9));
+        when(militarRepository.findById(1L)).thenReturn(Optional.of(militares.get(0)));
+        LocalDate terca = hoje.with(DayOfWeek.TUESDAY).plusWeeks(1);
+        EscalaFixada antiga = fixada(terca, PapelEscala.RESERVA, militares.get(0));
+        when(escalaFixadaRepository.findByDataAndPapel(terca, PapelEscala.RESERVA)).thenReturn(Optional.of(antiga));
+
+        int total = escalaService.salvarAjustesDoMapa(List.of(terca + "|TITULAR|1", terca + "|RESERVA|"), "adm");
+
+        assertEquals(2, total);
+        verify(escalaFixadaRepository).save(any());
+        verify(escalaFixadaRepository).delete(antiga);
     }
 
     private Usuario usuario(Long id, String login, Perfil perfil) {

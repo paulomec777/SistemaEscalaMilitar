@@ -3,6 +3,7 @@ package br.mil.eb.escala.dto;
 import br.mil.eb.escala.model.Militar;
 import br.mil.eb.escala.model.Missao;
 import lombok.Getter;
+import lombok.Setter;
 
 import java.time.LocalDate;
 import java.time.format.TextStyle;
@@ -24,6 +25,10 @@ public class DiaEscala {
     private final List<Militar> afastados;
     private final List<Militar> externos;
 
+    // Posições fixadas pelo ADM no mapa (só aparecem no modo edição)
+    @Setter private boolean titularFixado;
+    @Setter private boolean reservaFixado;
+
     public DiaEscala(LocalDate data, boolean expediente, String feriado, Militar titular, Militar reserva,
                      List<Missao> missoes, List<Militar> afastados, List<Militar> externos) {
         this.data = data;
@@ -38,6 +43,11 @@ public class DiaEscala {
 
     public boolean isHoje() {
         return data.isEqual(LocalDate.now());
+    }
+
+    /** O ADM pode arrastar militares para este dia? (de amanhã em diante, com expediente) */
+    public boolean isEditavel() {
+        return expediente && data.isAfter(LocalDate.now());
     }
 
     public boolean isPassado() {

@@ -2,13 +2,16 @@ package br.mil.eb.escala.service;
 
 import br.mil.eb.escala.dto.DiaEscala;
 import br.mil.eb.escala.exception.RegraNegocioException;
+import br.mil.eb.escala.model.EscalaFixada;
 import br.mil.eb.escala.model.Feriado;
 import br.mil.eb.escala.model.Militar;
 import br.mil.eb.escala.model.Missao;
+import br.mil.eb.escala.model.PapelEscala;
 import br.mil.eb.escala.model.Perfil;
 import br.mil.eb.escala.model.TipoTroca;
 import br.mil.eb.escala.model.Troca;
 import br.mil.eb.escala.model.Usuario;
+import br.mil.eb.escala.repository.EscalaFixadaRepository;
 import br.mil.eb.escala.repository.FeriadoRepository;
 import br.mil.eb.escala.repository.MilitarRepository;
 import br.mil.eb.escala.repository.TrocaRepository;
@@ -44,6 +47,7 @@ public class EscalaService {
     @Autowired private PasswordEncoder passwordEncoder;
     @Autowired private MissaoService missaoService;
     @Autowired private TrocaRepository trocaRepository;
+    @Autowired private EscalaFixadaRepository escalaFixadaRepository;
 
     public List<Militar> getMilitaresOrdenadosParaEscala() {
         LocalDate hoje = LocalDate.now();
@@ -73,15 +77,30 @@ public class EscalaService {
             
         if (trocadoParaHoje != null) return trocadoParaHoje;
 
+        // Militar fixado pelo ADM no mapa para hoje (se continuar disponível)
+        Militar fixado = getFixadoValido(hoje, PapelEscala.TITULAR);
+        if (fixado != null) return fixado;
+
         List<Militar> ordenados = getMilitaresOrdenadosParaEscala(); 
         return ordenados.isEmpty() ? null : ordenados.get(0);
     }
     
     public Militar getProximoSubstituto() {
         Militar titular = getProximoPermanencia();
+        Militar fixado = getFixadoValido(LocalDate.now(), PapelEscala.RESERVA);
+        if (fixado != null && (titular == null || !fixado.getId().equals(titular.getId()))) return fixado;
+
         return getMilitaresOrdenadosParaEscala().stream()
                 .filter(m -> titular == null || !m.getId().equals(titular.getId()))
                 .findFirst()
+                .orElse(null);
+    }
+
+    // Militar fixado pelo ADM nessa data/posição, se ainda estiver disponível nela
+    private Militar getFixadoValido(LocalDate data, PapelEscala papel) {
+        return escalaFixadaRepository.findByDataAndPapel(data, papel)
+                .map(EscalaFixada::getMilitar)
+                .filter(m -> m.estaAptoParaServico(data))
                 .orElse(null);
     }
 
@@ -249,6 +268,7 @@ public class EscalaService {
         if (militarRepository.existsById(id)) {
             missaoService.removerMilitarDasMissoes(id);
             trocaRepository.deleteAll(trocaRepository.findBySaiIdOrEntraId(id, id));
+            escalaFixadaRepository.deleteAll(escalaFixadaRepository.findByMilitarId(id));
             militarRepository.deleteById(id);
         }
     }
@@ -525,7 +545,13 @@ public class EscalaService {
                 .filter(f -> !f.getData().isBefore(inicioBusca) && !f.getData().isAfter(domingo))
                 .collect(Collectors.toMap(Feriado::getData, Feriado::getDescricao, (a, b) -> a));
 
-        Map<LocalDate, Militar[]> escalaProjetada = simularEscala(todos, hoje, domingo, missoesPorDia);
+        // Posições fixadas pelo ADM: "data|PAPEL" -> militar
+        Map<String, Militar> fixados = new HashMap<>();
+        for (EscalaFixada f : escalaFixadaRepository.findByDataBetween(inicioBusca, domingo)) {
+            fixados.put(f.getData() + "|" + f.getPapel(), f.getMilitar());
+        }
+
+        Map<LocalDate, Militar[]> escalaProjetada = simularEscala(todos, hoje, domingo, missoesPorDia, fixados);
 
         List<DiaEscala> semana = new ArrayList<>();
         for (LocalDate d = segunda; !d.isAfter(domingo); d = d.plusDays(1)) {
@@ -546,15 +572,21 @@ public class EscalaService {
             List<Militar> afastados = todos.stream().filter(m -> estaAfastadoEm(m, dia)).toList();
             List<Militar> externos = todos.stream().filter(m -> estaEmServicoExternoEm(m, dia)).toList();
 
-            semana.add(new DiaEscala(dia, expediente, feriados.get(dia), titular, reserva,
-                    missoesPorDia.getOrDefault(dia, List.of()), afastados, externos));
+            DiaEscala diaEscala = new DiaEscala(dia, expediente, feriados.get(dia), titular, reserva,
+                    missoesPorDia.getOrDefault(dia, List.of()), afastados, externos);
+            Militar titularFixado = fixados.get(dia + "|" + PapelEscala.TITULAR);
+            Militar reservaFixado = fixados.get(dia + "|" + PapelEscala.RESERVA);
+            diaEscala.setTitularFixado(titular != null && titularFixado != null && titularFixado.getId().equals(titular.getId()));
+            diaEscala.setReservaFixado(reserva != null && reservaFixado != null && reservaFixado.getId().equals(reserva.getId()));
+            semana.add(diaEscala);
         }
         return semana;
     }
 
     /** Simula de hoje até {@code ate}. Retorna, por dia útil, [titular, reserva]. */
     private Map<LocalDate, Militar[]> simularEscala(List<Militar> todos, LocalDate hoje, LocalDate ate,
-                                                    Map<LocalDate, List<Missao>> missoesPorDia) {
+                                                    Map<LocalDate, List<Missao>> missoesPorDia,
+                                                    Map<String, Militar> fixados) {
         Map<LocalDate, Militar[]> resultado = new HashMap<>();
         if (ate.isBefore(hoje)) return resultado;
 
@@ -618,8 +650,23 @@ public class EscalaService {
                                 .thenComparing(m -> ultimoServico.get(m.getId()),
                                         Comparator.nullsFirst(Comparator.naturalOrder())))
                         .toList();
-                titular = candidatos.isEmpty() ? null : candidatos.get(0);
-                reserva = candidatos.size() < 2 ? null : candidatos.get(1);
+                // O que o ADM fixou no mapa vale primeiro (se o militar estiver disponível no dia)
+                Militar titularFixado = fixados.get(dia + "|" + PapelEscala.TITULAR);
+                if (titularFixado != null && estaAptoNaData(titularFixado, dia)) {
+                    titular = titularFixado;
+                } else {
+                    titular = candidatos.isEmpty() ? null : candidatos.get(0);
+                }
+                final Militar titularDoDia = titular;
+                Militar reservaFixado = fixados.get(dia + "|" + PapelEscala.RESERVA);
+                if (reservaFixado != null && estaAptoNaData(reservaFixado, dia)
+                        && (titularDoDia == null || !reservaFixado.getId().equals(titularDoDia.getId()))) {
+                    reserva = reservaFixado;
+                } else {
+                    reserva = candidatos.stream()
+                            .filter(m -> titularDoDia == null || !m.getId().equals(titularDoDia.getId()))
+                            .findFirst().orElse(null);
+                }
             }
 
             if (titular != null) ultimoServico.put(titular.getId(), dia);
@@ -656,5 +703,80 @@ public class EscalaService {
         return m.getDataInicioServicoExterno() != null && m.getDataFimServicoExterno() != null
                 && !data.isBefore(m.getDataInicioServicoExterno())
                 && !data.isAfter(m.getDataFimServicoExterno());
+    }
+
+    /**
+     * Grava as mudanças que o ADM fez arrastando militares no mapa.
+     * Cada ajuste vem como "aaaa-mm-dd|TITULAR|idMilitar" (ou sem id para voltar ao automático).
+     * Tudo ou nada: se um ajuste for inválido, nenhum é gravado.
+     */
+    @Transactional
+    public int salvarAjustesDoMapa(List<String> ajustes, String autor) {
+        if (ajustes == null || ajustes.isEmpty()) return 0;
+        LocalDate hoje = LocalDate.now();
+        java.time.format.DateTimeFormatter br = java.time.format.DateTimeFormatter.ofPattern("dd/MM");
+        Map<LocalDate, Map<PapelEscala, Long>> resultadoPorDia = new HashMap<>();
+
+        for (String ajuste : ajustes) {
+            String[] partes = ajuste.split("\\|", -1);
+            if (partes.length != 3) throw new RegraNegocioException("Ajuste inválido enviado pelo mapa.");
+            LocalDate data;
+            PapelEscala papel;
+            try {
+                data = LocalDate.parse(partes[0]);
+                papel = PapelEscala.valueOf(partes[1]);
+            } catch (Exception e) {
+                throw new RegraNegocioException("Ajuste inválido enviado pelo mapa.");
+            }
+            if (!data.isAfter(hoje)) {
+                throw new RegraNegocioException("O mapa só altera de amanhã em diante. Para hoje, use a tela de Trocas.");
+            }
+            if (!isDiaUtil(data)) {
+                throw new RegraNegocioException("Não há permanência em " + data.format(br) + " (fim de semana ou feriado).");
+            }
+
+            EscalaFixada existente = escalaFixadaRepository.findByDataAndPapel(data, papel).orElse(null);
+            if (partes[2].isBlank()) {
+                // Voltar ao automático
+                if (existente != null) escalaFixadaRepository.delete(existente);
+                resultadoPorDia.computeIfAbsent(data, d -> new HashMap<>()).put(papel, null);
+                continue;
+            }
+
+            Militar militar = findMilitarById(Long.valueOf(partes[2]));
+            if (militar == null) throw new RegraNegocioException("Militar não encontrado.");
+            if (!estaAptoNaData(militar, data)) {
+                throw new RegraNegocioException(militar.getGraduacao() + " " + militar.getNomeGuerra()
+                        + " não está disponível em " + data.format(br) + " (afastado ou em serviço externo).");
+            }
+
+            EscalaFixada fixada = existente != null ? existente : new EscalaFixada();
+            fixada.setData(data);
+            fixada.setPapel(papel);
+            fixada.setMilitar(militar);
+            fixada.setAutor(autor);
+            fixada.setCriadoEm(LocalDateTime.now());
+            escalaFixadaRepository.save(fixada);
+            resultadoPorDia.computeIfAbsent(data, d -> new HashMap<>()).put(papel, militar.getId());
+        }
+
+        // O mesmo militar não pode ser titular e reserva no mesmo dia
+        for (Map.Entry<LocalDate, Map<PapelEscala, Long>> dia : resultadoPorDia.entrySet()) {
+            Long titular = idFixadoFinal(dia.getKey(), PapelEscala.TITULAR, dia.getValue());
+            Long reserva = idFixadoFinal(dia.getKey(), PapelEscala.RESERVA, dia.getValue());
+            if (titular != null && titular.equals(reserva)) {
+                throw new RegraNegocioException("Em " + dia.getKey().format(br)
+                        + " o mesmo militar ficou como titular e reserva. Ajuste e salve de novo.");
+            }
+        }
+
+        log.info("{} ajuste(s) da escala salvos pelo mapa (por {})", ajustes.size(), autor);
+        return ajustes.size();
+    }
+
+    // Militar que vai ficar fixado depois de salvar (o que veio agora ou o que já estava no banco)
+    private Long idFixadoFinal(LocalDate data, PapelEscala papel, Map<PapelEscala, Long> alteradosAgora) {
+        if (alteradosAgora.containsKey(papel)) return alteradosAgora.get(papel);
+        return escalaFixadaRepository.findByDataAndPapel(data, papel).map(f -> f.getMilitar().getId()).orElse(null);
     }
 }
