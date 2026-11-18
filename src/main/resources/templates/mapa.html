@@ -143,7 +143,7 @@
             border-radius: var(--raio); background: rgba(18,22,15,0.94); border: 1px solid rgba(201,165,76,0.45);
             box-shadow: var(--sombra); color: rgba(255,255,255,0.85);
         }
-        .painel-efetivo-topo { display: flex; flex-direction: column; gap: 0.2rem; margin-bottom: 0.7rem; font-size: 0.85rem; }
+        .painel-efetivo-topo { margin-bottom: 0.6rem; font-size: 0.8rem; color: rgba(255,255,255,0.6); }
         .painel-efetivo-topo b { color: var(--latao-claro); }
         .painel-efetivo-topo span { color: rgba(255,255,255,0.6); font-size: 0.8rem; }
         .painel-efetivo-topo a { color: var(--latao-claro); }
@@ -233,26 +233,20 @@
         <!-- Barra colada no mapa: legenda + edição (o botão e o efetivo só aparecem para o ADM) -->
         <div class="barra-mapa">
             <div class="legenda">
-                <span><i class="fas fa-square" style="color: var(--latao)"></i>T = titular da permanência</span>
-                <span><i class="fas fa-square" style="color: #9CCBEA"></i>R = reserva</span>
-                <span><i class="fas fa-square" style="color: var(--perigo)"></i>Missão de última hora</span>
-                <span><i class="fas fa-crosshairs" style="color: var(--perigo)"></i>Escalado também em missão (continua na permanência)</span>
-                <span><i class="fas fa-circle-info"></i>Dias futuros são uma previsão e mudam com trocas e afastamentos</span>
+                <span><i class="fas fa-square" style="color: var(--latao)"></i>T titular</span>
+                <span><i class="fas fa-square" style="color: #9CCBEA"></i>R reserva</span>
+                <span><i class="fas fa-crosshairs" style="color: var(--perigo)"></i>também em missão</span>
             </div>
             <div sec:authorize="hasRole('ADM')" class="acoes-mapa">
-                <span class="dica-edicao">Arraste militares para mudar os próximos dias</span>
                 <button type="button" id="botao-editar" class="botao-editar">
-                    <i class="fas fa-pen-to-square"></i> <span>Editar escala</span>
+                    <i class="fas fa-pen-to-square"></i> <span>Editar</span>
                 </button>
             </div>
         </div>
 
         <!-- Modo edição: o ADM arrasta militares para os dias (de amanhã em diante) -->
         <section sec:authorize="hasRole('ADM')" class="painel-efetivo" id="painel-efetivo" hidden>
-            <div class="painel-efetivo-topo">
-                <strong><i class="fas fa-hand-pointer"></i> Arraste um militar para a vaga de <b>T</b> (titular) ou <b>R</b> (reserva) de um dia.</strong>
-                <span>Também dá para arrastar de um dia para outro. O <i class="fas fa-xmark"></i> devolve a vaga para a escala automática. Hoje se altera pela tela de <a th:href="@{/admin/troca}">Trocas</a>.</span>
-            </div>
+            <div class="painel-efetivo-topo">Arraste para T ou R · <i class="fas fa-xmark"></i> volta ao automático</div>
             <div class="efetivo-lista">
                 <span th:each="m : ${efetivo}" class="chip-efetivo" draggable="true"
                       th:classappend="${m.status != 'APTO'} ? 'indisponivel'"
@@ -438,7 +432,7 @@
         botao.addEventListener('click', function () {
             var ativo = document.body.classList.toggle('modo-edicao');
             botao.classList.toggle('ativo', ativo);
-            botao.querySelector('span').textContent = ativo ? 'Sair da edição' : 'Editar escala';
+            botao.querySelector('span').textContent = ativo ? 'Concluir' : 'Editar';
             painel.hidden = !ativo;
             if (!ativo && total() > 0) avisar('Você tem alterações não salvas.');
         });
