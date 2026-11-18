@@ -168,16 +168,20 @@
         .remover-vaga { display: none; margin-left: auto; border: none; background: none; color: #A8322C; cursor: pointer; padding: 0 0.15rem; font-size: 0.8rem; }
         .modo-edicao .slot[data-editavel="true"] .remover-vaga { display: inline; }
 
-        .barra-salvar {
-            position: fixed; left: 50%; bottom: 1.25rem; transform: translateX(-50%); z-index: 100;
-            display: flex; align-items: center; gap: 0.75rem; padding: 0.7rem 0.8rem 0.7rem 1.1rem;
-            border-radius: 999px; background: var(--oliva-900); border: 1px solid var(--latao);
-            box-shadow: 0 20px 40px rgba(0,0,0,0.5); color: #fff; font-size: 0.9rem;
+        .acoes-salvar[hidden], .painel-efetivo[hidden] { display: none !important; }
+        .acoes-salvar { display: flex; gap: 0.5rem; margin: 0; }
+        .botao-salvar {
+            display: inline-flex; align-items: center; gap: 0.4rem; padding: 0.55rem 1rem; border-radius: 999px; border: none;
+            background: #5E7A35; color: #fff; font: 700 0.88rem var(--fonte); cursor: pointer;
         }
-        .barra-salvar[hidden], .painel-efetivo[hidden] { display: none !important; }
-        .barra-salvar .btn-primary { border-radius: 999px !important; }
+        .botao-salvar:disabled { background: rgba(255,255,255,0.12); color: rgba(255,255,255,0.45); cursor: default; }
+        .botao-salvar.pulsando { animation: pulsar-salvar 1.6s ease-in-out infinite; }
+        @keyframes pulsar-salvar {
+            0%, 100% { box-shadow: 0 0 0 0 rgba(111, 219, 154, 0.55); }
+            50% { box-shadow: 0 0 0 7px rgba(111, 219, 154, 0); }
+        }
         .botao-descartar { border: 1px solid rgba(255,255,255,0.25); background: none; color: #fff; border-radius: 999px; padding: 0.55rem 0.9rem; cursor: pointer; font: 600 0.85rem var(--fonte); }
-        .aviso-mapa { position: fixed; left: 50%; bottom: 5.2rem; transform: translateX(-50%); z-index: 100; padding: 0.6rem 1rem;
+        .aviso-mapa { position: fixed; left: 50%; bottom: 1.5rem; transform: translateX(-50%); z-index: 100; padding: 0.6rem 1rem;
             border-radius: 10px; background: #A8322C; color: #fff; font-size: 0.88rem; box-shadow: var(--sombra); }
 
         .dica-edicao { color: rgba(255,255,255,0.6); font-size: 0.8rem; }
@@ -217,12 +221,6 @@
 
         <section th:replace="~{fragments/layout :: alertaUltimaHora(${ultimaHora})}"></section>
 
-        <form sec:authorize="hasRole('ADM')" id="form-ajustes" th:action="@{/admin/mapa/salvar}" method="post" class="barra-salvar" hidden>
-            <input type="hidden" name="semana" th:value="${semana}">
-            <span id="contador-pendentes"><i class="fas fa-pen"></i> 0 alterações</span>
-            <button type="button" id="botao-descartar" class="botao-descartar">Descartar</button>
-            <button type="submit" class="btn-primary"><i class="fas fa-floppy-disk"></i> Salvar alterações</button>
-        </form>
 
         <section class="resumo-semana">
             <div><strong th:text="${totalMissoes}">3</strong> Missões na semana</div>
@@ -238,6 +236,13 @@
                 <span><i class="fas fa-crosshairs" style="color: var(--perigo)"></i>também em missão</span>
             </div>
             <div sec:authorize="hasRole('ADM')" class="acoes-mapa">
+                <form id="form-ajustes" th:action="@{/admin/mapa/salvar}" method="post" class="acoes-salvar" hidden>
+                    <input type="hidden" name="semana" th:value="${semana}">
+                    <button type="button" id="botao-descartar" class="botao-descartar">Descartar</button>
+                    <button type="submit" id="botao-salvar" class="botao-salvar" disabled>
+                        <i class="fas fa-floppy-disk"></i> <span id="contador-pendentes">Salvar</span>
+                    </button>
+                </form>
                 <button type="button" id="botao-editar" class="botao-editar">
                     <i class="fas fa-pen-to-square"></i> <span>Editar</span>
                 </button>
@@ -378,10 +383,14 @@
         function editavel(slot) { return slot && slot.dataset.editavel === 'true'; }
         function total() { return Object.keys(pendentes).length; }
 
+        var salvar = document.getElementById('botao-salvar');
+
         function atualizarBarra() {
             var n = total();
-            contador.innerHTML = '<i class="fas fa-pen"></i> ' + n + (n === 1 ? ' alteração' : ' alterações');
-            form.hidden = n === 0;
+            contador.textContent = n === 0 ? 'Salvar' : 'Salvar ' + n + (n === 1 ? ' alteração' : ' alterações');
+            salvar.disabled = n === 0;
+            salvar.classList.toggle('pulsando', n > 0);
+            form.hidden = !document.body.classList.contains('modo-edicao') && n === 0;
         }
 
         function avisar(texto) {
@@ -434,6 +443,7 @@
             botao.classList.toggle('ativo', ativo);
             botao.querySelector('span').textContent = ativo ? 'Concluir' : 'Editar';
             painel.hidden = !ativo;
+            atualizarBarra();
             if (!ativo && total() > 0) avisar('Você tem alterações não salvas.');
         });
 
