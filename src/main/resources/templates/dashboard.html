@@ -298,7 +298,7 @@
                     <span class="servico-folga"><i class="fas fa-bed"></i> Folga
                         <b th:text="${servicoHoje.folga != null ? servicoHoje.folga : '0'}">15</b> dias</span>
                     <div sec:authorize="hasRole('ADM')">
-                        <a th:href="@{/admin/troca}" class="servico-acao"><i class="fas fa-right-left"></i> Substituir titular</a>
+                        <a th:href="@{/admin/troca}" class="servico-acao"><i class="fas fa-right-left"></i> Trocar serviço de hoje</a>
                     </div>
                 </th:block>
                 <h2 th:if="${servicoHoje == null}" class="servico-nome vazio">Ninguém escalado</h2>
@@ -315,9 +315,6 @@
                         th:text="${(substitutoAmanha.graduacao != null ? substitutoAmanha.graduacao : '') + ' ' + (substitutoAmanha.nomeGuerra != null ? substitutoAmanha.nomeGuerra : '')}">Cb Nascimento</h2>
                     <span class="servico-folga"><i class="fas fa-bed"></i> Folga
                         <b th:text="${substitutoAmanha.folga != null ? substitutoAmanha.folga : '0'}">14</b> dias</span>
-                    <div sec:authorize="hasRole('ADM')">
-                        <a th:href="@{/admin/troca}" class="servico-acao"><i class="fas fa-rotate"></i> Mudar reserva</a>
-                    </div>
                 </th:block>
                 <h2 th:if="${substitutoAmanha == null}" class="servico-nome vazio">Sem reserva</h2>
             </article>

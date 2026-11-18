@@ -50,6 +50,11 @@ public class Militar {
     // Alterado para 'Boolean' (Classe Wrapper) para evitar o Erro 500 com valores NULL no banco
     @Column(name = "servico_pago_temporario")
     private Boolean servicoPagoTemporario = false;
+
+    // Quem SAIU numa troca de serviço pago: na virada do dia a folga zera
+    // como se ele tivesse tirado o serviço (Boolean pelo mesmo motivo do campo acima)
+    @Column(name = "pagou_servico")
+    private Boolean pagouServico = false;
     
     /**
      * Lógica central de aptidão. 
@@ -134,5 +139,14 @@ public class Militar {
 
     public void setServicoPagoTemporario(Boolean servicoPagoTemporario) {
         this.servicoPagoTemporario = servicoPagoTemporario;
+    }
+
+    // Mesmo cuidado com NULL vindo do banco
+    public boolean isPagouServico() {
+        return pagouServico != null && pagouServico;
+    }
+
+    public void setPagouServico(Boolean pagouServico) {
+        this.pagouServico = pagouServico;
     }
 }

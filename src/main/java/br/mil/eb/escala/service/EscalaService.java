@@ -6,6 +6,7 @@ import br.mil.eb.escala.model.Feriado;
 import br.mil.eb.escala.model.Militar;
 import br.mil.eb.escala.model.Missao;
 import br.mil.eb.escala.model.Perfil;
+import br.mil.eb.escala.model.TipoTroca;
 import br.mil.eb.escala.model.Usuario;
 import br.mil.eb.escala.repository.FeriadoRepository;
 import br.mil.eb.escala.repository.MilitarRepository;
@@ -173,7 +174,12 @@ public class EscalaService {
                     m.setDataFimServicoExterno(null);
             }
 
-            if (ehDiaDeServico) {
+            if (ehDiaDeServico && m.isPagouServico()) {
+                // Pagou o serviço numa troca: conta como se tivesse tirado ontem
+                m.setFolga(0);
+                m.setDataUltimoServico(ontem);
+                m.setPagouServico(false);
+            } else if (ehDiaDeServico) {
                 // Se o militar trabalhou no dia que acabou de se encerrar (data do último serviço = ontem)
                 if (m.getDataUltimoServico() != null && m.getDataUltimoServico().isEqual(ontem)) {
                     
@@ -194,6 +200,7 @@ public class EscalaService {
             } else {
                 // Finais de semana e feriados: ninguém tira serviço, todos ganham folga
                 m.setFolga(m.getFolga() + 1);
+                m.setPagouServico(false);
             }
         }
         militarRepository.saveAll(todos); 
@@ -300,46 +307,78 @@ public class EscalaService {
         }
     }
     
-    @Transactional
-    public void processarTroca(Long idSai, Long idEntra, String tipoTroca, String funcaoAlvo) {
-        Militar sai = findMilitarById(idSai);
-        Militar entra = findMilitarById(idEntra);
-        
-        if (sai == null || entra == null) throw new RegraNegocioException("Selecione os dois militares da troca.");
-        if (sai.getId().equals(entra.getId())) throw new RegraNegocioException("Quem sai e quem entra precisam ser militares diferentes.");
-        
+    /**
+     * Motivo pelo qual a troca de hoje NÃO pode ser feita, ou null se pode.
+     * (A tela usa isso para avisar o ADM antes de ele preencher o formulário.)
+     */
+    public String motivoParaNaoTrocarHoje() {
         LocalDate hoje = LocalDate.now();
-        if (tipoTroca == null) tipoTroca = "MISSAO";
+        if (!isDiaUtil(hoje)) return "Hoje não tem permanência (fim de semana ou feriado).";
+        Militar titular = getProximoPermanencia();
+        if (titular == null) return "Não há titular escalado hoje.";
+        if (hoje.equals(titular.getDataUltimoServico())) {
+            return "A permanência de hoje já foi alterada (" + titular.getGraduacao() + " " + titular.getNomeGuerra()
+                    + " está registrado no serviço). Só é possível uma troca por dia.";
+        }
+        return null;
+    }
 
-        switch (tipoTroca) {
-            case "PAGO":
-                // Quem paga perde a folga, mas NÃO tem a data mudada para hoje (não assume o Dashboard)
-                sai.setFolga(0);
-                
-                // Quem entra assume a data de hoje para aparecer no Dashboard...
+    /**
+     * Troca do titular de HOJE. Regras em {@link TipoTroca}.
+     * Quem sai é sempre o titular atual; o id vindo da tela só confere se a página não estava desatualizada.
+     */
+    @Transactional
+    public void processarTroca(Long idSai, Long idEntra, TipoTroca tipo) {
+        String impedimento = motivoParaNaoTrocarHoje();
+        if (impedimento != null) throw new RegraNegocioException(impedimento);
+        if (tipo == null) throw new RegraNegocioException("Escolha o tipo da troca.");
+
+        LocalDate hoje = LocalDate.now();
+        Militar sai = getProximoPermanencia();
+        Militar entra = findMilitarById(idEntra);
+
+        if (idSai == null || !idSai.equals(sai.getId())) {
+            throw new RegraNegocioException("O titular de hoje mudou enquanto a tela estava aberta. Confira e tente de novo.");
+        }
+        if (entra == null) throw new RegraNegocioException("Selecione quem vai entrar no serviço.");
+        if (entra.getId().equals(sai.getId())) throw new RegraNegocioException("Quem entra precisa ser outro militar.");
+        if (!entra.estaAptoParaServico(hoje) || missaoService.idsAfastadosPorMissao(hoje).contains(entra.getId())) {
+            throw new RegraNegocioException(entra.getNomeGuerra() + " não está disponível para o serviço hoje.");
+        }
+        if (hoje.minusDays(1).equals(entra.getDataUltimoServico())) {
+            throw new RegraNegocioException(entra.getNomeGuerra() + " saiu de serviço ontem e não pode entrar hoje.");
+        }
+
+        switch (tipo) {
+            case MISSAO:
+                // Quem entra tira o serviço hoje (zera à meia-noite). Quem sai não muda nada.
                 entra.setDataUltimoServico(hoje);
-                
-                // ... e ATIVA O ESCUDO para não zerar a folga à meia-noite!
+                break;
+
+            case PAGO:
+                // Quem entra tira hoje, mas o escudo impede a folga dele de zerar à meia-noite...
+                entra.setDataUltimoServico(hoje);
                 entra.setServicoPagoTemporario(true);
+                // ...e quem sai zera à meia-noite como se tivesse tirado (antes zerava na hora e ficava com 1)
+                sai.setPagouServico(true);
                 break;
-                
-            case "MISSAO":
-                // Força o substituto a ser exibido no Dashboard hoje (sem o escudo, pois a missão zera a folga dele à meia-noite)
-                entra.setDataUltimoServico(hoje);
-                break;
-                
-            case "PERMUTA":
-                int folgaTemp = sai.getFolga();
-                LocalDate dataTemp = sai.getDataUltimoServico();
+
+            case PERMUTA:
+                // Trocam de lugar na fila: quem sai herda a folga e a data de quem entrou
+                // (e por isso fica devendo o próximo serviço dele)...
+                int folgaSai = sai.getFolga();
                 sai.setFolga(entra.getFolga());
                 sai.setDataUltimoServico(entra.getDataUltimoServico());
-                entra.setFolga(folgaTemp);
-                entra.setDataUltimoServico(dataTemp);
+                // ...e quem entra assume a posição de quem saiu e tira o serviço de hoje
+                entra.setFolga(folgaSai);
+                entra.setDataUltimoServico(hoje);
                 break;
         }
-        
+
         militarRepository.save(sai);
         militarRepository.save(entra);
+        log.info("Troca {} em {}: sai {} {}, entra {} {}", tipo, hoje,
+                sai.getGraduacao(), sai.getNomeGuerra(), entra.getGraduacao(), entra.getNomeGuerra());
     }
     
     public List<Feriado> getTodosFeriados() { return feriadoRepository.findAll(); }
@@ -442,10 +481,12 @@ public class EscalaService {
         Map<Long, Integer> folga = new HashMap<>();
         Map<Long, LocalDate> ultimoServico = new HashMap<>();
         Map<Long, Boolean> servicoPago = new HashMap<>();
+        Map<Long, Boolean> pagouServico = new HashMap<>();
         for (Militar m : todos) {
             folga.put(m.getId(), m.getFolga());
             ultimoServico.put(m.getId(), m.getDataUltimoServico());
             servicoPago.put(m.getId(), m.isServicoPagoTemporario());
+            pagouServico.put(m.getId(), m.isPagouServico());
         }
 
         for (LocalDate d = hoje; !d.isAfter(ate); d = d.plusDays(1)) {
@@ -457,7 +498,11 @@ public class EscalaService {
                 boolean ontemFoiUtil = isDiaUtil(ontem);
                 for (Militar m : todos) {
                     Long id = m.getId();
-                    if (ontemFoiUtil && ontem.equals(ultimoServico.get(id))) {
+                    if (ontemFoiUtil && pagouServico.get(id)) {
+                        folga.put(id, 0);
+                        ultimoServico.put(id, ontem);
+                        pagouServico.put(id, false);
+                    } else if (ontemFoiUtil && ontem.equals(ultimoServico.get(id))) {
                         if (servicoPago.get(id)) {
                             folga.put(id, folga.get(id) + 1);
                             servicoPago.put(id, false);

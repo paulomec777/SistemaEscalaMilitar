@@ -4,6 +4,7 @@ import br.mil.eb.escala.dto.DiaEscala;
 import br.mil.eb.escala.exception.RegraNegocioException;
 import br.mil.eb.escala.model.Militar;
 import br.mil.eb.escala.model.Perfil;
+import br.mil.eb.escala.model.TipoTroca;
 import br.mil.eb.escala.model.Usuario;
 import br.mil.eb.escala.repository.FeriadoRepository;
 import br.mil.eb.escala.repository.MilitarRepository;
@@ -244,6 +245,114 @@ class EscalaServiceTest {
 
         assertThrows(RegraNegocioException.class, () -> escalaService.salvarNovoUsuario(novo));
         verify(usuarioRepository, never()).save(any());
+    }
+
+    // ======================= TROCAS =======================
+
+    private boolean hojeEhDiaUtil() {
+        DayOfWeek d = hoje.getDayOfWeek();
+        return d != DayOfWeek.SATURDAY && d != DayOfWeek.SUNDAY;
+    }
+
+    private Militar comBusca(Militar m) {
+        when(militarRepository.findById(m.getId())).thenReturn(Optional.of(m));
+        return m;
+    }
+
+    @Test
+    void trocaPorMissaoQuemEntraTiraEQuemSaiMantemAFolga() {
+        assumeTrue(hojeEhDiaUtil());
+        Militar alves = comBusca(militar(1, "Alves", 9, hoje.minusDays(9)));
+        Militar barros = comBusca(militar(2, "Barros", 5, hoje.minusDays(5)));
+
+        escalaService.processarTroca(1L, 2L, TipoTroca.MISSAO);
+
+        assertEquals(barros, escalaService.getProximoPermanencia());
+        assertEquals(hoje, barros.getDataUltimoServico());
+        assertFalse(barros.isServicoPagoTemporario());   // zera normalmente à meia-noite
+        assertEquals(9, alves.getFolga());                // quem saiu mantém a folga
+        assertFalse(alves.isPagouServico());
+    }
+
+    @Test
+    void servicoPagoQuemEntraNaoZeraEQuemSaiZeraNaVirada() {
+        assumeTrue(hojeEhDiaUtil());
+        Militar alves = comBusca(militar(1, "Alves", 9, hoje.minusDays(9)));
+        Militar barros = comBusca(militar(2, "Barros", 5, hoje.minusDays(5)));
+
+        escalaService.processarTroca(1L, 2L, TipoTroca.PAGO);
+
+        assertEquals(barros, escalaService.getProximoPermanencia());
+        assertTrue(barros.isServicoPagoTemporario());     // escudo: não zera à meia-noite
+        assertTrue(alves.isPagouServico());               // zera à meia-noite
+        assertEquals(9, alves.getFolga());                // ...mas não antes disso
+    }
+
+    @Test
+    void permutaTrocaOsLugaresNaFila() {
+        assumeTrue(hojeEhDiaUtil());
+        Militar alves = comBusca(militar(1, "Alves", 9, hoje.minusDays(9)));
+        Militar barros = comBusca(militar(2, "Barros", 5, hoje.minusDays(5)));
+
+        escalaService.processarTroca(1L, 2L, TipoTroca.PERMUTA);
+
+        assertEquals(barros, escalaService.getProximoPermanencia());
+        assertEquals(hoje, barros.getDataUltimoServico());
+        assertEquals(9, barros.getFolga());                       // assumiu o lugar do Alves
+        assertEquals(5, alves.getFolga());                        // Alves ficou no lugar do Barros
+        assertEquals(hoje.minusDays(5), alves.getDataUltimoServico());
+    }
+
+    @Test
+    void soUmaTrocaPorDia() {
+        assumeTrue(hojeEhDiaUtil());
+        comBusca(militar(1, "Alves", 9, hoje.minusDays(9)));
+        comBusca(militar(2, "Barros", 5, hoje.minusDays(5)));
+        comBusca(militar(3, "Cardoso", 3, hoje.minusDays(3)));
+
+        escalaService.processarTroca(1L, 2L, TipoTroca.MISSAO);
+
+        assertNotNull(escalaService.motivoParaNaoTrocarHoje());
+        assertThrows(RegraNegocioException.class, () -> escalaService.processarTroca(2L, 3L, TipoTroca.MISSAO));
+    }
+
+    @Test
+    void quemSaiuDeServicoOntemNaoPodeEntrarNaTroca() {
+        assumeTrue(hojeEhDiaUtil());
+        comBusca(militar(1, "Alves", 9, hoje.minusDays(9)));
+        comBusca(militar(2, "Barros", 0, hoje.minusDays(1)));
+
+        assertThrows(RegraNegocioException.class, () -> escalaService.processarTroca(1L, 2L, TipoTroca.MISSAO));
+    }
+
+    @Test
+    void trocaRecusadaSeOTitularMudouComATelaAberta() {
+        assumeTrue(hojeEhDiaUtil());
+        comBusca(militar(1, "Alves", 9, hoje.minusDays(9)));
+        comBusca(militar(2, "Barros", 5, hoje.minusDays(5)));
+        comBusca(militar(3, "Cardoso", 3, hoje.minusDays(3)));
+
+        // a tela dizia que o titular era o Barros, mas é o Alves
+        assertThrows(RegraNegocioException.class, () -> escalaService.processarTroca(2L, 3L, TipoTroca.MISSAO));
+    }
+
+    @Test
+    void naViradaQuemPagouOServicoZeraComoSeTivesseTirado() {
+        DayOfWeek ontem = hoje.minusDays(1).getDayOfWeek();
+        assumeTrue(ontem != DayOfWeek.SATURDAY && ontem != DayOfWeek.SUNDAY, "ontem precisa ser dia útil");
+
+        Militar alves = militar(1, "Alves", 9, hoje.minusDays(10));
+        alves.setPagouServico(true);
+        Militar barros = militar(2, "Barros", 5, hoje.minusDays(1)); // quem entrou no serviço pago
+        barros.setServicoPagoTemporario(true);
+
+        escalaService.avancarDiaDaEscala();
+
+        assertEquals(0, alves.getFolga());
+        assertEquals(hoje.minusDays(1), alves.getDataUltimoServico());
+        assertFalse(alves.isPagouServico());
+        assertEquals(6, barros.getFolga());               // não zerou: ganhou +1
+        assertFalse(barros.isServicoPagoTemporario());
     }
 
     private Usuario usuario(Long id, String login, Perfil perfil) {

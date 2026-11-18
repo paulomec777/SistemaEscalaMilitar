@@ -3,6 +3,7 @@ package br.mil.eb.escala.controller;
 import br.mil.eb.escala.exception.RegraNegocioException;
 import br.mil.eb.escala.model.Militar;
 import br.mil.eb.escala.model.Perfil;
+import br.mil.eb.escala.model.TipoTroca;
 import br.mil.eb.escala.model.Usuario;
 import br.mil.eb.escala.service.EscalaService;
 import lombok.Data;
@@ -181,55 +182,36 @@ public class AdminController {
     //TROCA DE SERVIÇO (ATUALIZADO PARA AS 3 REGRAS)
     @GetMapping("/troca")
     public String getFormularioTroca(Model model) {
-        model.addAttribute("listaMilitaresAtivos", escalaService.getMilitaresAtivos());
+        Militar titular = escalaService.getProximoPermanencia();
+        LocalDate hoje = LocalDate.now();
+        model.addAttribute("titularHoje", titular);
+        model.addAttribute("motivoBloqueio", escalaService.motivoParaNaoTrocarHoje());
+        model.addAttribute("tiposTroca", TipoTroca.values());
+        // Só aparece para entrar quem pode tirar o serviço hoje
+        model.addAttribute("listaMilitaresAtivos", escalaService.getMilitaresOrdenadosParaEscala().stream()
+                .filter(m -> titular == null || !m.getId().equals(titular.getId()))
+                .toList());
+        model.addAttribute("hoje", hoje);
         return "admin-troca";
     }
 
-    @PostMapping("/forcar-escala")
-    public String forcarEscalaPeloBotaoDaTabela(@RequestParam("id") Long militarEntraId, RedirectAttributes attributes) {
-        Militar titularAntigo = escalaService.getProximoPermanencia();
-        Militar entra = escalaService.findMilitarById(militarEntraId);
-
-        if (entra != null) {
-            escalaService.atualizarFolgaManual(entra.getId(), 0);
-            escalaService.atualizarDataUltimoServicoManual(entra.getId(), LocalDate.now());
-
-            if (titularAntigo != null && !titularAntigo.getId().equals(entra.getId())) {
-                attributes.addFlashAttribute("mensagem", "Escala alterada! " + entra.getNomeGuerra() + 
-                    " foi forçado para hoje. A folga de " + titularAntigo.getNomeGuerra() + " foi preservada intacta.");
-            } else {
-                attributes.addFlashAttribute("mensagem", entra.getNomeGuerra() + " foi forçado para o serviço de hoje.");
-            }
-        }
-        return "redirect:/dashboard";
-    }
     //Blindado contra erros caso o HTML mude
-   @PostMapping("/salvar-troca")
+    @PostMapping("/salvar-troca")
     public String salvarTroca(
-            @RequestParam Long militarSaiId, 
-            @RequestParam Long militarEntraId,
-            @RequestParam String tipoTroca,
-            @RequestParam(value = "funcaoAlvo", defaultValue = "TITULAR") String funcaoAlvo, 
+            @RequestParam(value = "militarSaiId", required = false) Long militarSaiId,
+            @RequestParam(value = "militarEntraId", required = false) Long militarEntraId,
+            @RequestParam(value = "tipoTroca", required = false) TipoTroca tipoTroca,
             RedirectAttributes attributes) {
         
-        // Executa a lógica de troca com base na regra e no posto selecionado
         try {
-            escalaService.processarTroca(militarSaiId, militarEntraId, tipoTroca, funcaoAlvo);
+            escalaService.processarTroca(militarSaiId, militarEntraId, tipoTroca);
         } catch (RegraNegocioException e) {
             attributes.addFlashAttribute("erro", e.getMessage());
             return "redirect:/admin/troca";
         }
-        
-        String mensagemRegra = "Troca registrada com sucesso! ";
-        if ("PAGO".equals(tipoTroca)) {
-            mensagemRegra += "Serviço Pago (Titular arcou com o turno).";
-        } else if ("MISSAO".equals(tipoTroca)) {
-            mensagemRegra += "Troca registrada por Missão/Necessidade do Serviço.";
-        } else if ("PERMUTA".equals(tipoTroca)) {
-            mensagemRegra += "Troca registrada por Permuta/Acordo (Folgas invertidas).";
-        }
 
-        attributes.addFlashAttribute("mensagem", mensagemRegra);
+        // Mensagem só para o ADM que fez a troca (o painel público não mostra trocas)
+        attributes.addFlashAttribute("mensagem", "Troca registrada: " + tipoTroca.getRotulo() + ". " + tipoTroca.getExplicacao());
         return "redirect:/dashboard";
     }
     

@@ -6,6 +6,26 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Admin - Troca de Serviço</title>
     <th:block th:replace="~{fragments/layout :: recursos}"></th:block>
+    <style>
+        .troca-lados { display: grid; grid-template-columns: 1fr auto 1fr; gap: 1rem; align-items: stretch; margin-bottom: 1.5rem; }
+        @media (max-width: 700px) { .troca-lados { grid-template-columns: 1fr; } .troca-seta { transform: rotate(90deg); justify-self: center; } }
+        .troca-lado { display: flex; flex-direction: column; gap: 0.4rem; padding: 1rem 1.1rem; border-radius: 12px; border: 1.5px solid; }
+        .troca-lado.sai { border-color: #F3CFCC; background: #FDF6F5; }
+        .troca-lado.entra { border-color: #C9E7D2; background: #F3FAF5; }
+        .troca-lado strong { font-family: var(--fonte-titulo); font-size: 1.6rem; text-transform: uppercase; color: var(--oliva-800); }
+        .troca-lado small { color: var(--texto-suave); font-size: 0.8rem; }
+        .troca-seta { align-self: center; font-size: 1.4rem; color: var(--latao); }
+        .troca-rotulo { display: block; font-size: 0.75rem !important; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; color: var(--texto-suave) !important; margin: 0 0 0.35rem !important; }
+        .troca-tipos { display: grid; gap: 0.6rem; margin-bottom: 1.25rem; }
+        .troca-tipo { display: flex !important; gap: 0.8rem; align-items: flex-start; margin: 0 !important; padding: 0.9rem 1rem; border-radius: 12px;
+            border: 1.5px solid #D6D8CC; background: #fff; cursor: pointer; text-transform: none !important; letter-spacing: 0 !important; color: var(--texto) !important; }
+        .troca-tipo:hover { border-color: var(--oliva-400); }
+        .troca-tipo:has(input:checked) { border-color: var(--oliva-500); background: rgba(85, 107, 47, 0.07); }
+        .troca-tipo input { width: 18px !important; height: 18px; margin-top: 0.15rem; accent-color: var(--oliva-500); }
+        .troca-tipo strong { display: block; font-size: 1rem; }
+        .troca-tipo small { display: block; font-size: 0.86rem; color: var(--texto-suave); line-height: 1.45; margin-top: 0.15rem; font-weight: 400; }
+        .troca-nota { font-size: 0.85rem; color: var(--texto-suave); margin: 0 0 1.25rem; }
+    </style>
 </head>
 <body>
     <div th:replace="~{fragments/layout :: fundo}"></div>
@@ -15,86 +35,66 @@
     <div class="main-container">
         <div th:replace="~{fragments/layout :: mensagens}"></div>
         
-        <div class="card" style="max-width: 800px; margin: 0 auto;">
+        <div class="card" style="max-width: 860px; margin: 0 auto;">
             <div class="card-header">
-                <h2>Registrar Troca de Serviço</h2>
+                <h2><i class="fas fa-right-left"></i> Troca de Serviço de Hoje</h2>
+                <span th:text="${#temporals.format(hoje, 'dd/MM/yyyy')}" style="font-weight: 600; color: var(--texto-suave);">17/11/2026</span>
             </div>
-            
-            <div style="background-color: #e9ecef; padding: 1rem; border-radius: 8px; margin-bottom: 1.5rem; border-left: 5px solid #6c757d;">
-                <p style="margin: 0; color: #495057; font-size: 0.95rem;">
-                    <strong>Instrução:</strong> Selecione o militar que está saindo e o que está assumindo o posto. 
-                    Escolha o motivo correto da alteração para que o sistema ajuste as folgas de forma justa.
-                </p>
+
+            <!-- Troca bloqueada (fim de semana, feriado ou troca já feita) -->
+            <div th:if="${motivoBloqueio != null}" class="flash flash-erro" style="margin-bottom: 0;">
+                <i class="fas fa-ban"></i> <span th:text="${motivoBloqueio}">Hoje não tem permanência.</span>
             </div>
-            
-            <form th:action="@{/admin/salvar-troca}" method="post">
-                
-                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 2rem;">
-                    
-                    <div class="form-group">
-                        <label for="militarSaiId" style="display: block; margin-bottom: 0.5rem; font-weight: 600; color: #dc3545;">
-                            MILITAR QUE SAI (Titular Original)
-                        </label>
-                        <select id="militarSaiId" name="militarSaiId" required 
-                                style="width: 100%; padding: 0.75rem; border: 1px solid #dc3545; border-radius: 8px; font-size: 1rem; background-color: #fff5f5;">
-                            <option value="">-- Selecione quem sai --</option>
-                            <option th:each="militar : ${listaMilitaresAtivos}"
-                                    th:value="${militar.id}"
-                                    th:text="${militar.graduacao + ' ' + militar.nomeGuerra + ' (Folga: ' + militar.folga + ')'}">
-                            </option>
-                        </select>
+
+            <form th:if="${motivoBloqueio == null}" th:action="@{/admin/salvar-troca}" method="post">
+                <!-- Quem sai é sempre o titular de hoje -->
+                <input type="hidden" name="militarSaiId" th:value="${titularHoje.id}">
+
+                <div class="troca-lados">
+                    <div class="troca-lado sai">
+                        <span class="troca-rotulo"><i class="fas fa-arrow-right-from-bracket"></i> Sai do serviço (titular de hoje)</span>
+                        <strong th:text="${titularHoje.graduacao + ' ' + titularHoje.nomeGuerra}">3º Sgt Alves</strong>
+                        <small th:text="${'Folga atual: ' + titularHoje.folga}">Folga atual: 9</small>
                     </div>
-                    
-                    <div class="form-group">
-                        <label for="militarEntraId" style="display: block; margin-bottom: 0.5rem; font-weight: 600; color: #28a745;">
-                            MILITAR QUE ENTRA (Substituto)
-                        </label>
-                        <select id="militarEntraId" name="militarEntraId" required 
-                                style="width: 100%; padding: 0.75rem; border: 1px solid #28a745; border-radius: 8px; font-size: 1rem; background-color: #f0fff4;">
-                            <option value="">-- Selecione quem assume --</option>
+                    <i class="fas fa-right-left troca-seta"></i>
+                    <div class="troca-lado entra">
+                        <label for="militarEntraId" class="troca-rotulo"><i class="fas fa-arrow-right-to-bracket"></i> Entra no serviço</label>
+                        <select id="militarEntraId" name="militarEntraId" required>
+                            <option value="">-- Escolha quem assume --</option>
                             <option th:each="militar : ${listaMilitaresAtivos}"
                                     th:value="${militar.id}"
-                                    th:text="${militar.graduacao + ' ' + militar.nomeGuerra + ' (Folga: ' + militar.folga + ')'}">
-                            </option>
+                                    th:text="${militar.graduacao + ' ' + militar.nomeGuerra + ' (folga ' + militar.folga + ')'}">Cb Duarte</option>
                         </select>
+                        <small>Só aparece quem pode tirar serviço hoje.</small>
                     </div>
                 </div>
 
-                <!-- NOVO SELETOR DE REGRAS DE NEGÓCIO -->
-                <div style="margin-top: 2rem; padding: 1.5rem; border: 1px solid #dee2e6; border-radius: 8px; background-color: #f8f9fa; border-left: 5px solid #f39c12;">
-                    <h4 style="margin: 0 0 10px 0; color: #856404; font-size: 1rem;">
-                        <i class="fas fa-cog"></i> Motivo da Alteração na Escala
-                    </h4>
-                    
-                    <label for="tipoTroca" style="display: block; font-weight: bold; margin-bottom: 8px; color: #333; font-size: 0.9rem;">
-                        Selecione a modalidade da troca:
+                <div class="troca-tipos">
+                    <span class="troca-rotulo">Tipo da troca</span>
+                    <label th:each="tipo, it : ${tiposTroca}" class="troca-tipo">
+                        <input type="radio" name="tipoTroca" th:value="${tipo}" th:checked="${it.first}" required>
+                        <span>
+                            <strong th:text="${tipo.rotulo}">Missão</strong>
+                            <small th:text="${tipo.explicacao}">Explicação</small>
+                        </span>
                     </label>
-                    <select name="tipoTroca" id="tipoTroca" required 
-                            style="width: 100%; padding: 0.75rem; border-radius: 6px; border: 1px solid #ccc; font-size: 0.95rem; background-color: white;">
-                        <option value="MISSAO">Necessidade do Serviço / Missão (Titular preserva a folga / Substituto zera a folga)</option>
-                        <option value="PAGO">Serviço Combinado (Titular zera a folga / Substituto preserva a folga)</option>
-                        <option value="PERMUTA">Troca de Acordo / Permuta Casada (Inverte as folgas entre ambos)</option>
-                    </select>
-
-                    <p style="margin: 10px 0 0 0; font-size: 0.82rem; color: #6c757d; line-height: 1.4;">
-                        <strong>Missão:</strong> Usado quando o escalante precisa puxar outro militar por motivo de força maior.<br>
-                        <strong>Serviço Combinado:</strong> O titular transfere o turno por acordo particular, arcando com o encargo (zera sua própria folga).<br>
-                        <strong>Permuta:</strong> Troca pura de datas combinada entre a tropa; o sistema troca as posições de folga diretamente.
-                    </p>
                 </div>
-                
-                <div style="margin-top: 2rem; text-align: right; border-top: 1px solid #eee; padding-top: 1.5rem;">
-                    <a th:href="@{/dashboard}" style="color: #666; text-decoration: none; font-weight: 500; margin-right: 1.5rem;">Cancelar</a>
-                    <button type="submit" class="btn-primary" style="padding: 0.75rem 2.5rem; font-size: 1rem; cursor: pointer; background-color: #556B2F; border: none; border-radius: 8px; color: white;">
-                        Confirmar Alteração
+
+                <p class="troca-nota">
+                    <i class="fas fa-eye-slash"></i> A troca só aparece para o ADM. No painel e no mapa a tropa vê apenas quem está de serviço.
+                </p>
+
+                <div style="display: flex; justify-content: flex-end; gap: 1rem; align-items: center; border-top: 1px solid var(--borda); padding-top: 1.25rem;">
+                    <a th:href="@{/dashboard}" style="color: var(--texto-suave); text-decoration: none; font-weight: 500;">Cancelar</a>
+                    <button type="submit" class="btn-primary"
+                            onclick="return confirm('Confirmar a troca do serviço de hoje? Só é possível uma troca por dia.');">
+                        <i class="fas fa-check"></i> Confirmar troca
                     </button>
                 </div>
-                
             </form>
-            
         </div>
     </div>
-    
+
     <footer th:replace="~{fragments/layout :: rodape}"></footer>
 </body>
 </html>
