@@ -71,11 +71,16 @@ public class DemoDataLoader implements CommandLineRunner {
     @Scheduled(cron = "0 0 * * * *", zone = "America/Sao_Paulo")
     @Transactional
     public void restaurarDadosDemo() {
-        missaoRepository.deleteAll(); // antes dos militares (tabela de ligação)
-        avisoRepository.deleteAll();
-        militarRepository.deleteAll();
-        feriadoRepository.deleteAll();
-        usuarioRepository.deleteAll();
+        // Dentro de uma transação o Hibernate faz os INSERTs antes dos DELETEs pendentes
+        // (e com IDENTITY o insert sai na hora). Por isso apagamos com comandos diretos
+        // (deleteAllInBatch) ou forçando o flush, senão o usuário "demo" novo bate
+        // com o antigo ainda não apagado ("Unique index" no e-mail) na virada de hora.
+        missaoRepository.deleteAll();   // apaga também a tabela de ligação com os militares
+        missaoRepository.flush();
+        avisoRepository.deleteAllInBatch();
+        militarRepository.deleteAllInBatch();
+        feriadoRepository.deleteAllInBatch();
+        usuarioRepository.deleteAllInBatch();
 
         criarUsuario();
         criarFeriados();
