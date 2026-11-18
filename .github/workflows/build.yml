@@ -70,6 +70,19 @@ jobs:
           # Página de erro própria
           curl -s -b cookies.txt -H "Accept: text/html" -o erro.html -w "status da página inexistente: %{http_code}\n" "http://localhost:8080/nao-existe"
           grep -q "Página não encontrada" erro.html || { echo "Página de erro não apareceu:"; head -c 600 erro.html; exit 1; }
+          # Nome gigante não derruba a tela (antes dava erro 500)
+          curl -sf -b cookies.txt http://localhost:8080/admin/novo-militar > novo.html
+          curl -s -b cookies.txt -o /dev/null -w "%{http_code}" --data-urlencode "graduacao=Cb" --data-urlencode "nomeGuerra=$(printf 'A%.0s' $(seq 1 300))" \
+               --data-urlencode "_csrf=$(token novo.html)" http://localhost:8080/admin/salvar-militar | grep -q 302 || { echo "Nome gigante deu erro"; exit 1; }
+          # Tela Minha senha abre
+          curl -sf -b cookies.txt http://localhost:8080/conta/senha | grep -q "Minha senha" || { echo "Tela Minha senha falhou"; exit 1; }
+          # 5 senhas erradas bloqueiam o usuário
+          for i in 1 2 3 4 5 6; do
+            curl -s -c tent.txt -b tent.txt http://localhost:8080/login > l.html
+            destino=$(curl -s -c tent.txt -b tent.txt -o /dev/null -w "%{redirect_url}" --data-urlencode "username=ninguem" \
+                 --data-urlencode "password=chute$i" --data-urlencode "_csrf=$(token l.html)" http://localhost:8080/login)
+          done
+          echo "$destino" | grep -q bloqueado || { echo "Login não bloqueou após várias tentativas: $destino"; exit 1; }
           echo "Todas as verificações passaram"
       - name: Log da aplicação
         if: always()

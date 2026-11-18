@@ -16,6 +16,7 @@ import br.mil.eb.escala.repository.TrocaRepository;
 import br.mil.eb.escala.repository.UsuarioRepository;
 import jakarta.transaction.Transactional;
 import org.springframework.boot.CommandLineRunner;
+import org.springframework.core.env.Environment;
 import org.springframework.context.annotation.Profile;
 import org.springframework.core.annotation.Order;
 import org.springframework.scheduling.annotation.Scheduled;
@@ -60,7 +61,15 @@ public class DemoDataLoader implements CommandLineRunner {
                           AvisoRepository avisoRepository,
                           MissaoRepository missaoRepository,
                           TrocaRepository trocaRepository,
-                          EscalaFixadaRepository escalaFixadaRepository) {
+                          EscalaFixadaRepository escalaFixadaRepository,
+                          Environment environment) {
+        // Trava de segurança: a demo apaga tudo de hora em hora e cria o ADM demo/demo.
+        // Nunca pode rodar contra o banco de verdade.
+        String url = environment.getProperty("spring.datasource.url", "");
+        if (!url.startsWith("jdbc:h2:mem:")) {
+            throw new IllegalStateException("O perfil 'demo' só pode usar o banco H2 em memória. "
+                    + "Remova SPRING_PROFILES_ACTIVE=demo deste ambiente.");
+        }
         this.militarRepository = militarRepository;
         this.feriadoRepository = feriadoRepository;
         this.usuarioRepository = usuarioRepository;

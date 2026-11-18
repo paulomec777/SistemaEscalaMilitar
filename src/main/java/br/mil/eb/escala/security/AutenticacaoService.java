@@ -16,12 +16,17 @@ public class AutenticacaoService implements UserDetailsService {
     @Autowired
     private UsuarioRepository usuarioRepository;
 
+    @Autowired
+    private LimiteDeTentativas limiteDeTentativas;
+
     @Override
     public UserDetails loadUserByUsername(String username) throws UsernameNotFoundException {
         Optional<Usuario> usuario = usuarioRepository.findByLogin(username);
         if (usuario.isEmpty()) {
             throw new UsernameNotFoundException("Usuário não encontrado!");
         }
+        // Muitas senhas erradas: o Spring Security recusa o login mesmo com a senha certa
+        usuario.get().setBloqueadoPorTentativas(limiteDeTentativas.estaBloqueado(username));
         return usuario.get();
     }
 }

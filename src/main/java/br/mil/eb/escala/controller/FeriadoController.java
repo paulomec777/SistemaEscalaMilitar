@@ -40,6 +40,10 @@ public class FeriadoController {
             attributes.addFlashAttribute("mensagemErro", "Preencha a data e a descrição do feriado.");
             return "redirect:/admin/feriados";
         }
+        if (feriado.getDescricao().trim().length() > 100) {
+            attributes.addFlashAttribute("mensagemErro", "A descrição do feriado aceita no máximo 100 caracteres.");
+            return "redirect:/admin/feriados";
+        }
         feriado.setDescricao(feriado.getDescricao().trim());
 
         //Verifica se a data já está cadastrada para evitar duplicidade

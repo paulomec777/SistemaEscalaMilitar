@@ -2,6 +2,7 @@ package br.mil.eb.escala.service;
 
 import br.mil.eb.escala.dto.DiaEscala;
 import br.mil.eb.escala.exception.RegraNegocioException;
+import br.mil.eb.escala.exception.Textos;
 import br.mil.eb.escala.model.EscalaFixada;
 import br.mil.eb.escala.model.Feriado;
 import br.mil.eb.escala.model.Militar;
@@ -94,11 +95,18 @@ public class EscalaService {
     
     public Militar getProximoSubstituto() {
         Militar titular = getProximoPermanencia();
+        // Quem saiu do serviço de hoje numa troca (doente, dispensado...) não vira reserva
+        Set<Long> sairamHoje = getTrocasDoServicoDeHoje().stream()
+                .map(t -> t.getSai().getId())
+                .collect(Collectors.toSet());
+
         Militar fixado = getFixadoValido(LocalDate.now(), PapelEscala.RESERVA);
-        if (fixado != null && (titular == null || !fixado.getId().equals(titular.getId()))) return fixado;
+        if (fixado != null && (titular == null || !fixado.getId().equals(titular.getId()))
+                && !sairamHoje.contains(fixado.getId())) return fixado;
 
         return getMilitaresOrdenadosParaEscala().stream()
                 .filter(m -> titular == null || !m.getId().equals(titular.getId()))
+                .filter(m -> !sairamHoje.contains(m.getId()))
                 .findFirst()
                 .orElse(null);
     }
@@ -280,7 +288,7 @@ public class EscalaService {
     public void afastarMilitar(Long id, String motivo, LocalDate inicio, LocalDate fim) {
         Militar militar = findMilitarById(id);
         if (militar == null) throw new RegraNegocioException("Selecione o militar.");
-        if (motivo == null || motivo.isBlank()) throw new RegraNegocioException("Informe o motivo do afastamento.");
+        motivo = Textos.obrigatorio(motivo, "o motivo do afastamento", 200);
         if (inicio == null || fim == null) throw new RegraNegocioException("Informe as datas de início e fim.");
         if (fim.isBefore(inicio)) throw new RegraNegocioException("A data de fim não pode ser antes da data de início.");
 
@@ -526,19 +534,14 @@ public class EscalaService {
 
     @Transactional
     public void salvarNovoUsuario(Usuario usuario) {
-        if (usuario.getLogin() == null || usuario.getLogin().isBlank()) throw new RegraNegocioException("Informe o login.");
-        if (usuario.getNomeCompleto() == null || usuario.getNomeCompleto().isBlank()) throw new RegraNegocioException("Informe o nome completo.");
+        usuario.setLogin(Textos.obrigatorio(usuario.getLogin(), "o login", 50));
+        usuario.setNomeCompleto(Textos.obrigatorio(usuario.getNomeCompleto(), "o nome completo", 120));
+        usuario.setEmail(Textos.opcional(usuario.getEmail(), "o e-mail", 120)); // vazio vira null (campo único no banco)
         if (usuario.getPerfil() == null) throw new RegraNegocioException("Escolha o perfil de acesso.");
-        if (usuario.getSenha() == null || usuario.getSenha().length() < 8) throw new RegraNegocioException("A senha precisa ter pelo menos 8 caracteres.");
-
-        usuario.setLogin(usuario.getLogin().trim());
+        validarSenha(usuario.getSenha());
         if (usuarioRepository.findByLogin(usuario.getLogin()).isPresent()) {
             throw new RegraNegocioException("Já existe um usuário com o login \"" + usuario.getLogin() + "\".");
         }
-        // E-mail vazio vira null (o campo é único no banco, e dois "" dariam erro)
-        if (usuario.getEmail() != null && usuario.getEmail().isBlank()) usuario.setEmail(null);
-
-        usuario.setNomeCompleto(usuario.getNomeCompleto().trim());
         usuario.setSenha(passwordEncoder.encode(usuario.getSenha()));
         usuarioRepository.save(usuario);
     }
@@ -554,11 +557,32 @@ public class EscalaService {
         usuarioRepository.deleteById(id);
     }
 
+    /** O próprio usuário troca a senha, confirmando a atual. */
+    @Transactional
+    public void trocarSenha(String login, String senhaAtual, String novaSenha, String confirmacao) {
+        Usuario usuario = usuarioRepository.findByLogin(login)
+                .orElseThrow(() -> new RegraNegocioException("Usuário não encontrado."));
+        if (senhaAtual == null || !passwordEncoder.matches(senhaAtual, usuario.getSenha())) {
+            throw new RegraNegocioException("A senha atual não confere.");
+        }
+        validarSenha(novaSenha);
+        if (!novaSenha.equals(confirmacao)) throw new RegraNegocioException("A confirmação não é igual à nova senha.");
+        if (passwordEncoder.matches(novaSenha, usuario.getSenha())) {
+            throw new RegraNegocioException("A nova senha precisa ser diferente da atual.");
+        }
+        usuario.setSenha(passwordEncoder.encode(novaSenha));
+        usuarioRepository.save(usuario);
+        log.info("Usuário {} trocou a própria senha", login);
+    }
+
+    private void validarSenha(String senha) {
+        if (senha == null || senha.length() < 8) throw new RegraNegocioException("A senha precisa ter pelo menos 8 caracteres.");
+        if (senha.length() > 72) throw new RegraNegocioException("A senha aceita no máximo 72 caracteres.");
+    }
+
     private void validarNomeEGraduacao(Militar militar) {
-        if (militar.getGraduacao() == null || militar.getGraduacao().isBlank()) throw new RegraNegocioException("Informe a graduação.");
-        if (militar.getNomeGuerra() == null || militar.getNomeGuerra().isBlank()) throw new RegraNegocioException("Informe o nome de guerra.");
-        militar.setGraduacao(militar.getGraduacao().trim());
-        militar.setNomeGuerra(militar.getNomeGuerra().trim());
+        militar.setGraduacao(Textos.obrigatorio(militar.getGraduacao(), "a graduação", 30));
+        militar.setNomeGuerra(Textos.obrigatorio(militar.getNomeGuerra(), "o nome de guerra", 60));
     }
 
     // =====================================================================

@@ -21,12 +21,13 @@
 
     <!--
         Vídeo de fundo (Higgsfield ou qualquer MP4).
-        O endereço vem da propriedade app.video-fundo (padrão: /videos/fundo.mp4).
+        O endereço vem da propriedade app.video-fundo (vazio = sem vídeo, só o gradiente).
         Se o vídeo não existir, fica só o gradiente verde-oliva por trás.
     -->
     <div th:fragment="fundo" class="fundo" aria-hidden="true">
         <video class="fundo-video" autoplay muted loop playsinline preload="auto"
-               th:src="${@environment.getProperty('app.video-fundo', '/videos/fundo.mp4')}"
+               th:if="${!#strings.isEmpty(@environment.getProperty('app.video-fundo', ''))}"
+               th:src="${@environment.getProperty('app.video-fundo')}"
                onerror="this.remove()"></video>
         <div class="fundo-veu"></div>
         <div class="fundo-grade"></div>
@@ -75,6 +76,9 @@
                     </div>
                 </div>
             </th:block>
+
+            <a sec:authorize="isAuthenticated()" th:href="@{/conta/senha}" th:classappend="${ativo == 'senha'} ? 'active'">
+                <i class="fas fa-key"></i> Minha senha</a>
 
             <form sec:authorize="isAuthenticated()" th:action="@{/logout}" method="post" class="nav-sair">
                 <button type="submit"><i class="fas fa-arrow-right-from-bracket"></i> Sair</button>

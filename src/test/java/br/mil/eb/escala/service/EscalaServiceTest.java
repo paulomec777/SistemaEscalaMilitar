@@ -561,6 +561,52 @@ class EscalaServiceTest {
         verify(escalaFixadaRepository).delete(antiga);
     }
 
+    // ======================= PENDÊNCIAS DA AVALIAÇÃO =======================
+
+    @Test
+    void quemSaiuNaTrocaNaoViraReservaDoDia() {
+        assumeTrue(hojeEhDiaUtil());
+        Militar alves = comBusca(militar(1, "Alves", 9, hoje.minusDays(9)));
+        comBusca(militar(2, "Barros", 5, hoje.minusDays(5)));
+        comBusca(militar(3, "Cardoso", 3, hoje.minusDays(3)));
+
+        escalaService.processarTroca(1L, 2L, TipoTroca.MISSAO, "adm"); // Alves saiu (doente)
+
+        assertEquals("Barros", escalaService.getProximoPermanencia().getNomeGuerra());
+        assertNotEquals(alves, escalaService.getProximoSubstituto());
+        assertEquals("Cardoso", escalaService.getProximoSubstituto().getNomeGuerra());
+    }
+
+    @Test
+    void nomeDeGuerraGrandeDemaisEhRecusadoComMensagem() {
+        Militar m = new Militar();
+        m.setGraduacao("Cb");
+        m.setNomeGuerra("A".repeat(300));
+
+        RegraNegocioException erro = assertThrows(RegraNegocioException.class, () -> escalaService.salvarNovoMilitar(m));
+        assertTrue(erro.getMessage().contains("60"));
+        verify(militarRepository, never()).save(any());
+    }
+
+    @Test
+    void trocarSenhaConfereASenhaAtualEAConfirmacao() {
+        Usuario u = usuario(5L, "cb.souza", Perfil.MILITAR);
+        u.setSenha("hash-antigo");
+        when(usuarioRepository.findByLogin("cb.souza")).thenReturn(Optional.of(u));
+        when(passwordEncoder.matches("senhaAntiga1", "hash-antigo")).thenReturn(true);
+        when(passwordEncoder.encode("senhaNova123")).thenReturn("hash-novo");
+
+        assertThrows(RegraNegocioException.class,
+                () -> escalaService.trocarSenha("cb.souza", "errada", "senhaNova123", "senhaNova123"));
+        assertThrows(RegraNegocioException.class,
+                () -> escalaService.trocarSenha("cb.souza", "senhaAntiga1", "senhaNova123", "outraCoisa"));
+        assertThrows(RegraNegocioException.class,
+                () -> escalaService.trocarSenha("cb.souza", "senhaAntiga1", "curta", "curta"));
+
+        escalaService.trocarSenha("cb.souza", "senhaAntiga1", "senhaNova123", "senhaNova123");
+        assertEquals("hash-novo", u.getSenha());
+    }
+
     private Usuario usuario(Long id, String login, Perfil perfil) {
         Usuario u = new Usuario();
         u.setId(id);

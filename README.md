@@ -130,11 +130,24 @@ PostgreSQL nem das variáveis `DB_*`, e nunca toca no banco real.
 As telas têm um vídeo de fundo atrás de um véu verde-oliva (pensado para vídeos
 gerados no [Higgsfield](https://higgsfield.ai)). Para usar o seu:
 
-- coloque o MP4 em `src/main/resources/static/videos/fundo.mp4`, **ou**
-- defina a variável `APP_VIDEO_FUNDO` com o endereço público do vídeo.
+- coloque o MP4 em `src/main/resources/static/videos/fundo.mp4` e defina
+  `APP_VIDEO_FUNDO=/videos/fundo.mp4`, **ou**
+- defina `APP_VIDEO_FUNDO` com o endereço público do vídeo.
 
 Sem vídeo, o sistema mostra só o gradiente. Quem prefere menos movimento
 (configuração do sistema operacional) também vê só o gradiente.
+
+## Configurações de produção
+
+| Variável | Para que serve | Padrão |
+| --- | --- | --- |
+| `APP_PAINEL_PUBLICO` | `false` exige login também no painel e no mapa (use se o sistema ficar acessível pela internet) | `true` |
+| `COOKIE_SEGURO` | `true` faz o cookie de sessão trafegar só por HTTPS (use no Railway) | `false` |
+| `APP_VIDEO_FUNDO` | Endereço do vídeo de fundo | vazio |
+
+Segurança já embutida: proteção CSRF, bloqueio de 15 minutos após 5 senhas erradas,
+senha mínima de 8 caracteres, tela "Minha senha", sessão que cai após 30 minutos parada
+e trava que impede o perfil `demo` de rodar fora do banco H2 em memória.
 
 ## Deploy
 

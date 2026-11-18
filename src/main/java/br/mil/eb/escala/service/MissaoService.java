@@ -1,6 +1,7 @@
 package br.mil.eb.escala.service;
 
 import br.mil.eb.escala.exception.RegraNegocioException;
+import br.mil.eb.escala.exception.Textos;
 import br.mil.eb.escala.model.Militar;
 import br.mil.eb.escala.model.Missao;
 import br.mil.eb.escala.repository.MilitarRepository;
@@ -61,9 +62,9 @@ public class MissaoService {
     @Transactional
     public Missao criar(String titulo, String descricao, String local, LocalDate data, LocalTime horario,
                         boolean ultimaHora, boolean afastaDaPermanencia, List<Long> militaresIds, String autor) {
-        if (titulo == null || titulo.isBlank()) {
-            throw new RegraNegocioException("Informe o nome da missão.");
-        }
+        titulo = Textos.obrigatorio(titulo, "o nome da missão", 120);
+        descricao = Textos.opcional(descricao, "as instruções", 1000);
+        local = Textos.opcional(local, "o local", 120);
         if (data == null) {
             throw new RegraNegocioException("Informe a data da missão.");
         }
@@ -80,9 +81,9 @@ public class MissaoService {
         }
 
         Missao missao = new Missao();
-        missao.setTitulo(titulo.trim());
-        missao.setDescricao(descricao == null ? null : descricao.trim());
-        missao.setLocal(local == null ? null : local.trim());
+        missao.setTitulo(titulo);
+        missao.setDescricao(descricao);
+        missao.setLocal(local);
         missao.setData(data);
         missao.setHorario(horario);
         missao.setUltimaHora(ultimaHora);

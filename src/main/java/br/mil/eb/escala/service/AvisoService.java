@@ -1,6 +1,7 @@
 package br.mil.eb.escala.service;
 
 import br.mil.eb.escala.exception.RegraNegocioException;
+import br.mil.eb.escala.exception.Textos;
 import br.mil.eb.escala.model.Aviso;
 import br.mil.eb.escala.model.PrioridadeAviso;
 import br.mil.eb.escala.repository.AvisoRepository;
@@ -44,9 +45,8 @@ public class AvisoService {
     @Transactional
     public Aviso publicar(String titulo, String mensagem, PrioridadeAviso prioridade,
                           LocalDate inicio, LocalDate fim, String autor) {
-        if (titulo == null || titulo.isBlank()) {
-            throw new RegraNegocioException("Informe o título do aviso.");
-        }
+        titulo = Textos.obrigatorio(titulo, "o título do aviso", 120);
+        mensagem = Textos.opcional(mensagem, "a mensagem", 1000);
         if (inicio == null) inicio = LocalDate.now();
         if (fim == null) fim = inicio;
         if (fim.isBefore(inicio)) {
@@ -54,8 +54,8 @@ public class AvisoService {
         }
 
         Aviso aviso = new Aviso();
-        aviso.setTitulo(titulo.trim());
-        aviso.setMensagem(mensagem == null ? null : mensagem.trim());
+        aviso.setTitulo(titulo);
+        aviso.setMensagem(mensagem);
         aviso.setPrioridade(prioridade == null ? PrioridadeAviso.NORMAL : prioridade);
         aviso.setDataInicio(inicio);
         aviso.setDataFim(fim);
