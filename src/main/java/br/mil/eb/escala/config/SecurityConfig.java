@@ -31,6 +31,8 @@ public class SecurityConfig {
                 // --- MUDANÇA AQUI ---
                 // O Dashboard e a raiz são PÚBLICOS (qualquer um vê)
                 .requestMatchers("/", "/dashboard", "/mapa").permitAll()
+                // Página de erro precisa abrir para qualquer um (senão vira redirecionamento para o login)
+                .requestMatchers("/error", "/favicon.ico").permitAll()
                 // O Admin continua restrito
                 .requestMatchers("/admin/**").hasRole("ADM")
                 // Qualquer outra coisa requer autenticação
@@ -46,8 +48,10 @@ public class SecurityConfig {
                 .logoutUrl("/logout")
                 .logoutSuccessUrl("/dashboard") // Ao sair, volta para o painel público
                 .permitAll()
-            )
-            .csrf(csrf -> csrf.disable());
+            );
+            // CSRF fica LIGADO (padrão do Spring Security): os formulários com th:action
+            // já enviam o token sozinhos, e isso impede que outro site dispare ações
+            // de ADM usando a sessão de quem está logado na intranet.
             
         return http.build();
     }

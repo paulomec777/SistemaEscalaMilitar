@@ -86,8 +86,25 @@ public class Militar {
         return true;
     }
 
+    // Tem serviço externo lançado (agendado, em andamento ou nas 48h de descanso)
     public boolean isEmServicoExterno() {
         return this.dataInicioServicoExterno != null;
+    }
+
+    // Afastamento (férias, dispensa...) cobre essa data?
+    public boolean estaAfastadoEm(LocalDate data) {
+        if (!ativoNaEscala && (dataInicioAfastamento == null || dataFimAfastamento == null)) {
+            return true; // afastado sem prazo definido
+        }
+        return dataInicioAfastamento != null && dataFimAfastamento != null
+                && !data.isBefore(dataInicioAfastamento) && !data.isAfter(dataFimAfastamento);
+    }
+
+    // Serviço externo ou as 48h de descanso (dia seguinte ao fim) cobrem essa data?
+    public boolean estaEmServicoExternoEm(LocalDate data) {
+        return dataInicioServicoExterno != null && dataFimServicoExterno != null
+                && !data.isBefore(dataInicioServicoExterno)
+                && !data.isAfter(dataFimServicoExterno.plusDays(1));
     }
 
     // Método auxiliar para limpar impedimento manual quando o militar retornar
@@ -96,11 +113,15 @@ public class Militar {
         this.justificativaImpedimento = null;
     }
 
+    // Status de HOJE: olha as datas, e não só se há algo cadastrado.
+    // (Antes, quem voltava do serviço externo ficava "EXTERNO" para sempre e
+    //  férias marcadas para o mês que vem já apareciam como "AFASTADO".)
     public String getStatus() {
-        if (!ativoNaEscala || !disponivelManualmente) {
+        LocalDate hoje = LocalDate.now();
+        if (!disponivelManualmente || estaAfastadoEm(hoje)) {
             return "AFASTADO";
         }
-        if (isEmServicoExterno()) {
+        if (estaEmServicoExternoEm(hoje)) {
             return "EXTERNO";
         }
         return "APTO";

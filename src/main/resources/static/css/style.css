@@ -692,3 +692,5 @@ input[type="submit"].btn-primary {
     background: #FDF0EF; color: #A8322C; font: 600 0.8rem var(--fonte); cursor: pointer;
 }
 .btn-perigo-mini:hover { background: #F9DEDB; }
+.mensagens-tela { width: 100%; max-width: 1000px; margin: 0 auto; }
+.mensagens-tela:empty { display: none; }

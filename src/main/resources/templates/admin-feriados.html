@@ -14,6 +14,7 @@
 
     <!-- Conteúdo Principal - CENTRALIZADO e FLEXÍVEL -->
     <div class="main-container" style="flex: 1; display: flex; flex-direction: column; align-items: center; padding: 2rem 20px; box-sizing: border-box;">
+        <div th:replace="~{fragments/layout :: mensagens}"></div>
         
         <!-- Coluna 1: Adicionar Feriado -->
         <div class="card" style="width: 100%; max-width: 800px; background-color: #fff; padding: 2rem; border-radius: 8px; box-shadow: 0 4px 10px rgba(0,0,0,0.1); box-sizing: border-box; margin-bottom: 2rem;">
@@ -67,12 +68,13 @@
                             <td style="padding: 1rem; color: #333;" th:text="${#temporals.format(feriadoItem.data, 'dd/MM/yyyy')}">25/12/2026</td>
                             <td style="padding: 1rem; color: #333;" th:text="${feriadoItem.descricao}">Natal</td>
                             <td style="padding: 1rem; text-align: center;">
-                                <a th:href="@{/admin/feriados/excluir/{id}(id=${feriadoItem.id})}" 
-                                   onclick="return confirm('Tem certeza que deseja EXCLUIR este feriado da escala?');"
-                                   class="btn-primary" 
-                                   style="background-color: #E74C3C; font-size: 0.85rem; padding: 0.5rem 1rem; text-decoration: none; display: inline-block; border-radius: 6px; font-weight: 500;">
-                                    Excluir
-                                </a>
+                                <form th:action="@{/admin/feriados/excluir/{id}(id=${feriadoItem.id})}" method="post" style="margin: 0;"
+                                      onsubmit="return confirm('Tem certeza que deseja EXCLUIR este feriado da escala?');">
+                                    <button type="submit" class="btn-primary"
+                                            style="background-color: #E74C3C; font-size: 0.85rem; padding: 0.5rem 1rem; border-radius: 6px; font-weight: 500;">
+                                        Excluir
+                                    </button>
+                                </form>
                             </td>
                         </tr>
                         <tr th:if="${#lists.isEmpty(feriados)}">

@@ -14,6 +14,7 @@
 
     <!-- Conteúdo Principal -->
     <div class="main-container">
+        <div th:replace="~{fragments/layout :: mensagens}"></div>
         
         <!-- CARD 1: Formulário de Afastamento -->
         <div class="card" style="max-width: 800px; margin: 0 auto 2rem auto;">
@@ -74,7 +75,7 @@
         <!-- CARD 2: Tabela de Militares Afastados (Reativar) -->
         <div class="card" style="max-width: 1000px; margin: 0 auto;">
             <div class="card-header">
-                <h2>Militares Atualmente Afastados</h2>
+                <h2>Militares Afastados e Afastamentos Agendados</h2>
             </div>
             
             <table class="escala-table">
@@ -105,12 +106,13 @@
                         </td>
                         
                         <td style="text-align: center;">
-                            <a th:href="@{/admin/reativar/{id}(id=${militar.id})}" 
-                               class="btn-primary"
-                               style="background-color: #28a745; border: none; padding: 0.4rem 0.8rem; font-size: 0.9rem; text-decoration: none;"
-                               onclick="return confirm('Deseja REATIVAR este militar antes do prazo?');">
-                                ↺ Reativar
-                            </a>
+                            <form th:action="@{/admin/reativar/{id}(id=${militar.id})}" method="post" style="margin: 0;"
+                                  onsubmit="return confirm('Deseja REATIVAR este militar antes do prazo?');">
+                                <button type="submit" class="btn-primary"
+                                        style="background-color: #28a745; border: none; padding: 0.4rem 0.8rem; font-size: 0.9rem;">
+                                    ↺ Reativar
+                                </button>
+                            </form>
                         </td>
                     </tr>
                     

@@ -103,6 +103,14 @@
         <a th:href="@{/mapa}" class="alerta-link">Ver no mapa <i class="fas fa-arrow-right"></i></a>
     </section>
 
+    <!-- Mensagens de retorno (sucesso/erro) das telas de admin.
+         Uso: <div th:replace="~{fragments/layout :: mensagens}"></div> -->
+    <div th:fragment="mensagens" class="mensagens-tela">
+        <div th:if="${mensagem != null}" class="flash flash-ok"><i class="fas fa-circle-check"></i> <span th:text="${mensagem}">Ok</span></div>
+        <div th:if="${erro != null}" class="flash flash-erro"><i class="fas fa-circle-exclamation"></i> <span th:text="${erro}">Erro</span></div>
+        <div th:if="${mensagemErro != null}" class="flash flash-erro"><i class="fas fa-circle-exclamation"></i> <span th:text="${mensagemErro}">Erro</span></div>
+    </div>
+
     <footer th:fragment="rodape" class="rodape">
         <span>Sistema de Escala Militar &copy; 2026</span>
         <span class="rodape-sep">·</span>

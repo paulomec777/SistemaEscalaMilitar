@@ -14,6 +14,7 @@
 
     <!-- Conteúdo Principal - CENTRALIZADO e FLEXÍVEL -->
     <div class="main-container" style="flex: 1; display: flex; flex-direction: column; align-items: center; padding: 2rem 20px; box-sizing: border-box; width: 100%;">
+        <div th:replace="~{fragments/layout :: mensagens}"></div>
         
         <!-- CARD 1: Formulário para Adicionar Usuário -->
         <div class="card" style="width: 100%; max-width: 1000px; background-color: #fff; padding: 2rem; border-radius: 8px; box-shadow: 0 4px 10px rgba(0,0,0,0.1); box-sizing: border-box; margin-bottom: 2rem;">
@@ -45,8 +46,8 @@
                     <!-- Campo Senha -->
                     <div class="form-group">
                         <label for="senha" style="display: block; margin-bottom: 0.5rem; font-weight: 600; color: #333;">Senha</label>
-                        <input type="password" id="senha" th:field="*{senha}" 
-                               placeholder="Senha forte" required
+                        <input type="password" id="senha" th:field="*{senha}" minlength="8" 
+                               placeholder="Mínimo de 8 caracteres" required
                                style="width: 100%; padding: 0.75rem; border: 1px solid #ccc; border-radius: 8px; box-sizing: border-box; font-size: 1rem;">
                     </div>
                     
@@ -108,9 +109,9 @@
                             <td style="padding: 1rem; text-align: center;">
                                 <!-- 
                                   Botão de Excluir 
-                                  th:if="${user.id != 1}" -> Protege o root (ID 1)
+                                  th:if="${user.login != 'root'}" -> Protege o root (ID 1)
                                 -->
-                                <form th:if="${user.id != 1}"
+                                <form th:if="${user.login != 'root'}"
                                       th:action="@{/admin/deletar-usuario/{id}(id=${user.id})}" 
                                       method="post"
                                       onsubmit="return confirm('Tem certeza que deseja EXCLUIR este usuário? Ele perderá o acesso ao sistema.');"
@@ -122,7 +123,7 @@
                                 </form>
                                 
                                 <!-- Se for o ID 1 (root), mostra um texto discreto -->
-                                <span th:if="${user.id == 1}" style="color: #999; font-size: 0.85rem; font-style: italic;">
+                                <span th:if="${user.login == 'root'}" style="color: #999; font-size: 0.85rem; font-style: italic;">
                                     (Conta Principal)
                                 </span>
                             </td>

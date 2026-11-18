@@ -1,5 +1,6 @@
 package br.mil.eb.escala.controller;
 
+import br.mil.eb.escala.exception.RegraNegocioException;
 import br.mil.eb.escala.model.Militar;
 import br.mil.eb.escala.model.Perfil;
 import br.mil.eb.escala.model.Usuario;
@@ -13,27 +14,14 @@ import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
+import java.security.Principal;
 import java.time.LocalDate;
-import org.springframework.jdbc.core.JdbcTemplate;
-import jakarta.annotation.PostConstruct;
+import java.time.format.DateTimeParseException;
 
 @Controller
 @RequestMapping("/admin")
 public class AdminController {
 
-    @Autowired
-    private JdbcTemplate jdbcTemplate;
-
-    @PostConstruct
-    public void corrigirBancoRailway() {
-        try {
-            System.out.println("==== TENTANDO DESTRAVAR O BANCO DE DADOS DO RAILWAY ====");
-            jdbcTemplate.execute("ALTER TABLE militares DROP CONSTRAINT militares_motivo_afastamento_check");
-            System.out.println("==== SUCESSO: TRAVA DO BANCO REMOVIDA! ====");
-        } catch (Exception e) {
-            System.out.println("==== A TRAVA JÁ FOI REMOVIDA ANTERIORMENTE. TUDO CERTO! ====");
-        }
-    }
     @Autowired 
     private EscalaService escalaService;
 
@@ -69,21 +57,35 @@ public class AdminController {
     }
 
     @PostMapping("/salvar-militar")
-    public String salvarMilitar(@ModelAttribute Militar militar) {
-        escalaService.salvarNovoMilitar(militar);
-        return "redirect:/dashboard";
+    public String salvarMilitar(@ModelAttribute Militar militar, RedirectAttributes attributes) {
+        try {
+            escalaService.salvarNovoMilitar(militar);
+            attributes.addFlashAttribute("mensagem", militar.getGraduacao() + " " + militar.getNomeGuerra() + " cadastrado na escala.");
+            return "redirect:/dashboard";
+        } catch (RegraNegocioException e) {
+            attributes.addFlashAttribute("erro", e.getMessage());
+            return "redirect:/admin/novo-militar";
+        }
     }
     
     @GetMapping("/editar/{id}")
     public String getFormularioEditar(@PathVariable("id") Long id, Model model) {
-        model.addAttribute("militar", escalaService.findMilitarById(id));
+        Militar militar = escalaService.findMilitarById(id);
+        if (militar == null) return "redirect:/dashboard";
+        model.addAttribute("militar", militar);
         return "admin-editar";
     }
 
     @PostMapping("/salvar-edicao")
-    public String salvarEdicao(@ModelAttribute Militar militar) {
-        escalaService.editarMilitar(militar);
-        return "redirect:/dashboard";
+    public String salvarEdicao(@ModelAttribute Militar militar, RedirectAttributes attributes) {
+        try {
+            escalaService.editarMilitar(militar);
+            attributes.addFlashAttribute("mensagem", "Dados do militar atualizados.");
+            return "redirect:/dashboard";
+        } catch (RegraNegocioException e) {
+            attributes.addFlashAttribute("erro", e.getMessage());
+            return "redirect:/admin/editar/" + militar.getId();
+        }
     }
     
     @PostMapping("/atualizar-folga")
@@ -93,19 +95,22 @@ public class AdminController {
     }
 
     @PostMapping("/atualizar-data-servico")
-    public String atualizarDataServico(@RequestParam("id") Long id, @RequestParam("novaData") String novaDataStr) {
+    public String atualizarDataServico(@RequestParam("id") Long id, @RequestParam("novaData") String novaDataStr,
+                                       RedirectAttributes attributes) {
         try {
             LocalDate novaData = LocalDate.parse(novaDataStr);
             escalaService.atualizarDataUltimoServicoManual(id, novaData);
-        } catch (Exception e) {
-            System.out.println("Erro ao converter data inserida no dashboard: " + e.getMessage());
+            attributes.addFlashAttribute("mensagem", "Data do último serviço atualizada e folga recalculada.");
+        } catch (DateTimeParseException e) {
+            attributes.addFlashAttribute("mensagem", "Data inválida. Use o calendário para escolher a data.");
         }
         return "redirect:/dashboard"; 
     }
     
     @PostMapping("/deletar/{id}")
-    public String deletarMilitar(@PathVariable("id") Long id) {
+    public String deletarMilitar(@PathVariable("id") Long id, RedirectAttributes attributes) {
         escalaService.deletarMilitar(id);
+        attributes.addFlashAttribute("mensagem", "Militar excluído do sistema.");
         return "redirect:/dashboard";
     }
 
@@ -117,7 +122,7 @@ public class AdminController {
         return "admin-afastar";
     }
     
-    //Evita o erro 500 e joga o motivo real nos logs
+    //Valida tudo no service e mostra o motivo do erro na própria tela
     @PostMapping("/salvar-afastamento")
     public String salvarAfastamento(
             @RequestParam(value = "militarId", required = false) Long militarId, 
@@ -127,30 +132,23 @@ public class AdminController {
             RedirectAttributes attributes) {
         
         try {
-            System.out.println("---- INICIANDO SALVAMENTO DE AFASTAMENTO ----");
-            System.out.println("Militar ID: " + militarId);
-            System.out.println("Motivo: " + motivoAfastamento);
-            System.out.println("Data Início: " + dataInicioStr);
-            System.out.println("Data Fim: " + dataFimStr);
-            
-            LocalDate dataInicio = LocalDate.parse(dataInicioStr);
-            LocalDate dataFim = LocalDate.parse(dataFimStr);
-            
+            LocalDate dataInicio = (dataInicioStr == null || dataInicioStr.isBlank()) ? null : LocalDate.parse(dataInicioStr);
+            LocalDate dataFim = (dataFimStr == null || dataFimStr.isBlank()) ? null : LocalDate.parse(dataFimStr);
             escalaService.afastarMilitar(militarId, motivoAfastamento, dataInicio, dataFim);
-            
-            System.out.println("---- AFASTAMENTO SALVO COM SUCESSO ----");
-            
-        } catch (Exception e) {
-            System.out.println("---- ERRO GRAVE AO SALVAR AFASTAMENTO ----");
-            e.printStackTrace(); 
+            attributes.addFlashAttribute("mensagem", "Afastamento registrado.");
+        } catch (RegraNegocioException e) {
+            attributes.addFlashAttribute("erro", e.getMessage());
+        } catch (DateTimeParseException e) {
+            attributes.addFlashAttribute("erro", "Data inválida. Use o calendário para escolher as datas.");
         }
         
         return "redirect:/admin/afastar";
     }
 
-    @GetMapping("/reativar/{id}")
-    public String reativarMilitar(@PathVariable("id") Long id) {
+    @PostMapping("/reativar/{id}")
+    public String reativarMilitar(@PathVariable("id") Long id, RedirectAttributes attributes) {
         escalaService.reativarMilitar(id);
+        attributes.addFlashAttribute("mensagem", "Militar reativado na escala.");
         return "redirect:/admin/afastar";
     }
 
@@ -164,8 +162,13 @@ public class AdminController {
     }
 
     @PostMapping("/agendar-externo")
-    public String agendarServicoExterno(@ModelAttribute ServicoExternoForm form) {
-        escalaService.agendarServicoExterno(form.getMilitarId(), form.getDataInicio(), form.getDataFim());
+    public String agendarServicoExterno(@ModelAttribute ServicoExternoForm form, RedirectAttributes attributes) {
+        try {
+            escalaService.agendarServicoExterno(form.getMilitarId(), form.getDataInicio(), form.getDataFim());
+            attributes.addFlashAttribute("mensagem", "Serviço externo lançado.");
+        } catch (RegraNegocioException e) {
+            attributes.addFlashAttribute("erro", e.getMessage());
+        }
         return "redirect:/admin/controle";
     }
 
@@ -210,7 +213,12 @@ public class AdminController {
             RedirectAttributes attributes) {
         
         // Executa a lógica de troca com base na regra e no posto selecionado
-        escalaService.processarTroca(militarSaiId, militarEntraId, tipoTroca, funcaoAlvo);
+        try {
+            escalaService.processarTroca(militarSaiId, militarEntraId, tipoTroca, funcaoAlvo);
+        } catch (RegraNegocioException e) {
+            attributes.addFlashAttribute("erro", e.getMessage());
+            return "redirect:/admin/troca";
+        }
         
         String mensagemRegra = "Troca registrada com sucesso! ";
         if ("PAGO".equals(tipoTroca)) {
@@ -235,14 +243,24 @@ public class AdminController {
     }
 
     @PostMapping("/salvar-usuario")
-    public String salvarUsuario(@ModelAttribute Usuario usuario) {
-        escalaService.salvarNovoUsuario(usuario);
+    public String salvarUsuario(@ModelAttribute Usuario usuario, RedirectAttributes attributes) {
+        try {
+            escalaService.salvarNovoUsuario(usuario);
+            attributes.addFlashAttribute("mensagem", "Usuário " + usuario.getLogin() + " criado.");
+        } catch (RegraNegocioException e) {
+            attributes.addFlashAttribute("erro", e.getMessage());
+        }
         return "redirect:/admin/usuarios";
     }
 
     @PostMapping("/deletar-usuario/{id}")
-    public String deletarUsuario(@PathVariable("id") Long id) {
-        escalaService.deletarUsuario(id);
+    public String deletarUsuario(@PathVariable("id") Long id, Principal principal, RedirectAttributes attributes) {
+        try {
+            escalaService.deletarUsuario(id, principal.getName());
+            attributes.addFlashAttribute("mensagem", "Usuário excluído.");
+        } catch (RegraNegocioException e) {
+            attributes.addFlashAttribute("erro", e.getMessage());
+        }
         return "redirect:/admin/usuarios";
     }
 }

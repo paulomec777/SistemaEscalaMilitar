@@ -1,14 +1,18 @@
 package br.mil.eb.escala.service;
 
 import br.mil.eb.escala.dto.DiaEscala;
+import br.mil.eb.escala.exception.RegraNegocioException;
 import br.mil.eb.escala.model.Feriado;
 import br.mil.eb.escala.model.Militar;
 import br.mil.eb.escala.model.Missao;
+import br.mil.eb.escala.model.Perfil;
 import br.mil.eb.escala.model.Usuario;
 import br.mil.eb.escala.repository.FeriadoRepository;
 import br.mil.eb.escala.repository.MilitarRepository;
 import br.mil.eb.escala.repository.UsuarioRepository;
 import jakarta.transaction.Transactional;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -27,6 +31,8 @@ import java.util.stream.Collectors;
 
 @Service
 public class EscalaService {
+
+    private static final Logger log = LoggerFactory.getLogger(EscalaService.class);
 
     @Autowired private MilitarRepository militarRepository;
     @Autowired private FeriadoRepository feriadoRepository;
@@ -108,6 +114,33 @@ public class EscalaService {
         }
     }
 
+    /**
+     * Fechamento do dia (23h55): se nenhum militar foi registrado no serviço de hoje
+     * (troca ou data salva pelo ADM), registra quem a escala apontou como titular.
+     * Sem isso, se o ADM esquecesse de salvar a data, o titular não zerava a folga
+     * à meia-noite e caía de novo no topo da escala no dia seguinte.
+     */
+    @Scheduled(cron = "0 55 23 * * *", zone = "America/Sao_Paulo")
+    @Transactional
+    public void registrarServicoDoDia() {
+        LocalDate hoje = LocalDate.now();
+        if (!isDiaUtil(hoje)) return; // fim de semana e feriado não têm permanência
+
+        boolean jaRegistrado = militarRepository.findAll().stream()
+                .anyMatch(m -> hoje.equals(m.getDataUltimoServico()));
+        if (jaRegistrado) return;
+
+        Militar titular = getProximoPermanencia();
+        if (titular != null) {
+            titular.setDataUltimoServico(hoje);
+            militarRepository.save(titular);
+            log.info("Serviço de {} registrado automaticamente para {} {}", hoje,
+                    titular.getGraduacao(), titular.getNomeGuerra());
+        } else {
+            log.warn("Nenhum militar disponível para a permanência de {}", hoje);
+        }
+    }
+
     // MOTOR DA MEIA-NOITE ATUALIZADO COM O ESCUDO DO SERVIÇO PAGO
     @Scheduled(cron = "0 0 0 * * *", zone = "America/Sao_Paulo")
     @Transactional 
@@ -119,13 +152,25 @@ public class EscalaService {
         List<Militar> todos = militarRepository.findAll();
 
         for (Militar m : todos) {
-            // Reativar afastamentos/doenças vencidas automaticamente
-            if (!m.isAtivoNaEscala() && m.getDataFimAfastamento() != null && 
-               (m.getDataFimAfastamento().isEqual(hoje) || m.getDataFimAfastamento().isBefore(hoje))) {
+            // Reativar afastamentos vencidos: só no dia SEGUINTE ao fim
+            // (antes reativava no próprio último dia do afastamento)
+            if (m.getDataFimAfastamento() != null && m.getDataFimAfastamento().isBefore(hoje)) {
                     m.setAtivoNaEscala(true);
                     m.setMotivoAfastamento(null);
                     m.setDataInicioAfastamento(null);
                     m.setDataFimAfastamento(null);
+            }
+
+            // Afastamento lançado com antecedência começa hoje: sai da escala
+            if (m.isAtivoNaEscala() && m.getDataInicioAfastamento() != null
+                    && !m.getDataInicioAfastamento().isAfter(hoje)) {
+                    m.setAtivoNaEscala(false);
+            }
+
+            // Serviço externo encerrado (incluindo as 48h): limpa para o status voltar a APTO
+            if (m.getDataFimServicoExterno() != null && m.getDataFimServicoExterno().plusDays(1).isBefore(hoje)) {
+                    m.setDataInicioServicoExterno(null);
+                    m.setDataFimServicoExterno(null);
             }
 
             if (ehDiaDeServico) {
@@ -163,6 +208,7 @@ public class EscalaService {
     }
 
     public void salvarNovoMilitar(Militar militar) {
+        validarNomeEGraduacao(militar);
         militar.setAtivoNaEscala(true);
         if (militar.getDataUltimoServico() == null) militar.setDataUltimoServico(LocalDate.now());
 
@@ -179,10 +225,11 @@ public class EscalaService {
     }
     
     public void editarMilitar(Militar dados) {
+        validarNomeEGraduacao(dados);
         Militar original = findMilitarById(dados.getId());
         if (original != null) {
-            original.setGraduacao(dados.getGraduacao());
-            original.setNomeGuerra(dados.getNomeGuerra());
+            original.setGraduacao(dados.getGraduacao().trim());
+            original.setNomeGuerra(dados.getNomeGuerra().trim());
             militarRepository.save(original);
         }
     }
@@ -196,22 +243,30 @@ public class EscalaService {
 
     public void afastarMilitar(Long id, String motivo, LocalDate inicio, LocalDate fim) {
         Militar militar = findMilitarById(id);
-        if (militar != null) {
-            militar.setAtivoNaEscala(false); 
-            militar.setMotivoAfastamento(motivo);
-            militar.setDataInicioAfastamento(inicio);
-            militar.setDataFimAfastamento(fim);
-            militarRepository.save(militar);
-        }
+        if (militar == null) throw new RegraNegocioException("Selecione o militar.");
+        if (motivo == null || motivo.isBlank()) throw new RegraNegocioException("Informe o motivo do afastamento.");
+        if (inicio == null || fim == null) throw new RegraNegocioException("Informe as datas de início e fim.");
+        if (fim.isBefore(inicio)) throw new RegraNegocioException("A data de fim não pode ser antes da data de início.");
+
+        // Afastamento que já começou tira da escala agora; o futuro só no dia do início
+        // (quem cuida disso é o motor da meia-noite e o estaAptoParaServico pelas datas)
+        militar.setAtivoNaEscala(inicio.isAfter(LocalDate.now()));
+        militar.setMotivoAfastamento(motivo.trim());
+        militar.setDataInicioAfastamento(inicio);
+        militar.setDataFimAfastamento(fim);
+        militarRepository.save(militar);
     }
 
     public List<Militar> getMilitaresInativos() {
-        return militarRepository.findAll().stream().filter(m -> !m.isAtivoNaEscala()).toList();
+        // Inclui afastamentos agendados para o futuro, para o ADM poder cancelar
+        return militarRepository.findAll().stream()
+                .filter(m -> !m.isAtivoNaEscala() || m.getDataFimAfastamento() != null)
+                .toList();
     }
     
     public void reativarMilitar(Long id) {
         Militar militar = findMilitarById(id);
-        if (militar != null && !militar.isAtivoNaEscala()) {
+        if (militar != null) {
             militar.setAtivoNaEscala(true);
             militar.setMotivoAfastamento(null);
             militar.setDataInicioAfastamento(null);
@@ -228,11 +283,12 @@ public class EscalaService {
     
     public void agendarServicoExterno(Long id, LocalDate inicio, LocalDate fim) {
         Militar m = findMilitarById(id);
-        if (m != null) { 
-            m.setDataInicioServicoExterno(inicio);
-            m.setDataFimServicoExterno(fim); 
-            militarRepository.save(m); 
-        }
+        if (m == null) throw new RegraNegocioException("Selecione o militar.");
+        if (inicio == null || fim == null) throw new RegraNegocioException("Informe as datas de início e retorno.");
+        if (fim.isBefore(inicio)) throw new RegraNegocioException("A data de retorno não pode ser antes da data de início.");
+        m.setDataInicioServicoExterno(inicio);
+        m.setDataFimServicoExterno(fim);
+        militarRepository.save(m);
     }
 
     public void cancelarServicoExterno(Long id) {
@@ -249,7 +305,8 @@ public class EscalaService {
         Militar sai = findMilitarById(idSai);
         Militar entra = findMilitarById(idEntra);
         
-        if (sai == null || entra == null) return;
+        if (sai == null || entra == null) throw new RegraNegocioException("Selecione os dois militares da troca.");
+        if (sai.getId().equals(entra.getId())) throw new RegraNegocioException("Quem sai e quem entra precisam ser militares diferentes.");
         
         LocalDate hoje = LocalDate.now();
         if (tipoTroca == null) tipoTroca = "MISSAO";
@@ -291,15 +348,39 @@ public class EscalaService {
 
     @Transactional
     public void salvarNovoUsuario(Usuario usuario) {
-        if (usuario.getSenha() != null && !usuario.getSenha().isEmpty()) {
-            usuario.setSenha(passwordEncoder.encode(usuario.getSenha()));
+        if (usuario.getLogin() == null || usuario.getLogin().isBlank()) throw new RegraNegocioException("Informe o login.");
+        if (usuario.getNomeCompleto() == null || usuario.getNomeCompleto().isBlank()) throw new RegraNegocioException("Informe o nome completo.");
+        if (usuario.getPerfil() == null) throw new RegraNegocioException("Escolha o perfil de acesso.");
+        if (usuario.getSenha() == null || usuario.getSenha().length() < 8) throw new RegraNegocioException("A senha precisa ter pelo menos 8 caracteres.");
+
+        usuario.setLogin(usuario.getLogin().trim());
+        if (usuarioRepository.findByLogin(usuario.getLogin()).isPresent()) {
+            throw new RegraNegocioException("Já existe um usuário com o login \"" + usuario.getLogin() + "\".");
         }
+        // E-mail vazio vira null (o campo é único no banco, e dois "" dariam erro)
+        if (usuario.getEmail() != null && usuario.getEmail().isBlank()) usuario.setEmail(null);
+
+        usuario.setNomeCompleto(usuario.getNomeCompleto().trim());
+        usuario.setSenha(passwordEncoder.encode(usuario.getSenha()));
         usuarioRepository.save(usuario);
     }
 
     @Transactional
-    public void deletarUsuario(Long id) {
-        if (usuarioRepository.existsById(id)) usuarioRepository.deleteById(id);
+    public void deletarUsuario(Long id, String loginDeQuemExclui) {
+        Usuario usuario = usuarioRepository.findById(id).orElse(null);
+        if (usuario == null) return;
+        if ("root".equals(usuario.getLogin())) throw new RegraNegocioException("A conta principal (root) não pode ser excluída.");
+        if (usuario.getLogin().equals(loginDeQuemExclui)) throw new RegraNegocioException("Você não pode excluir a sua própria conta.");
+        long totalAdm = usuarioRepository.findAll().stream().filter(u -> u.getPerfil() == Perfil.ADM).count();
+        if (usuario.getPerfil() == Perfil.ADM && totalAdm <= 1) throw new RegraNegocioException("O sistema precisa ter pelo menos um administrador.");
+        usuarioRepository.deleteById(id);
+    }
+
+    private void validarNomeEGraduacao(Militar militar) {
+        if (militar.getGraduacao() == null || militar.getGraduacao().isBlank()) throw new RegraNegocioException("Informe a graduação.");
+        if (militar.getNomeGuerra() == null || militar.getNomeGuerra().isBlank()) throw new RegraNegocioException("Informe o nome de guerra.");
+        militar.setGraduacao(militar.getGraduacao().trim());
+        militar.setNomeGuerra(militar.getNomeGuerra().trim());
     }
 
     // =====================================================================

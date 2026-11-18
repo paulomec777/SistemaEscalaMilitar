@@ -36,6 +36,8 @@ public class EscalaServicoApplication implements CommandLineRunner {
     private String senhaInicialAdmin;
 
     public static void main(String[] args) {
+        // Fuso definido ANTES de subir o Spring, para todas as datas (e a virada da meia-noite) usarem o horário de Brasília
+        TimeZone.setDefault(TimeZone.getTimeZone("America/Sao_Paulo"));
         SpringApplication.run(EscalaServicoApplication.class, args);
     }
 
