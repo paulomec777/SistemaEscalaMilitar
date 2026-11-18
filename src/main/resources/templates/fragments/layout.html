@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="pt-br" xmlns:th="http://www.thymeleaf.org"
+      xmlns:sec="http://www.thymeleaf.org/extras/spring-security">
+<head>
+    <!--
+        Fragmentos compartilhados por todas as telas.
+        Uso: <th:block th:replace="~{fragments/layout :: recursos}"></th:block> no <head>
+             <div th:replace="~{fragments/layout :: fundo}"></div> logo após <body>
+             <header th:replace="~{fragments/layout :: cabecalho('troca')}"></header>
+             <footer th:replace="~{fragments/layout :: rodape}"></footer>
+    -->
+    <th:block th:fragment="recursos">
+        <link rel="preconnect" href="https://fonts.googleapis.com">
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Saira+Condensed:wght@600;700;800&display=swap" rel="stylesheet">
+        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+        <link rel="stylesheet" th:href="@{/css/style.css}">
+    </th:block>
+</head>
+<body>
+
+    <!--
+        Vídeo de fundo (Higgsfield ou qualquer MP4).
+        O endereço vem da propriedade app.video-fundo (padrão: /videos/fundo.mp4).
+        Se o vídeo não existir, fica só o gradiente verde-oliva por trás.
+    -->
+    <div th:fragment="fundo" class="fundo" aria-hidden="true">
+        <video class="fundo-video" autoplay muted loop playsinline preload="auto"
+               th:src="${@environment.getProperty('app.video-fundo', '/videos/fundo.mp4')}"
+               onerror="this.remove()"></video>
+        <div class="fundo-veu"></div>
+        <div class="fundo-grade"></div>
+    </div>
+
+    <header th:fragment="cabecalho(ativo)" class="header">
+        <a th:href="@{/dashboard}" class="logo">
+            <span class="logo-insignia"><i class="fas fa-shield-halved"></i></span>
+            <span class="logo-texto">
+                <strong>Permanência</strong>
+                <small>CSUP · Escala de Serviço</small>
+            </span>
+        </a>
+
+        <input type="checkbox" id="menu-toggle" class="menu-toggle" aria-label="Abrir menu">
+        <label for="menu-toggle" class="menu-botao"><i class="fas fa-bars"></i></label>
+
+        <nav class="nav">
+            <a th:href="@{/dashboard}" th:classappend="${ativo == 'escala'} ? 'active'">
+                <i class="fas fa-calendar-days"></i> Escala</a>
+
+            <th:block sec:authorize="hasRole('ADM')">
+                <a th:href="@{/admin/novo-militar}" th:classappend="${ativo == 'cadastro'} ? 'active'">
+                    <i class="fas fa-user-plus"></i> Cadastrar</a>
+                <a th:href="@{/admin/afastar}" th:classappend="${ativo == 'afastar'} ? 'active'">
+                    <i class="fas fa-user-slash"></i> Impedimentos</a>
+                <a th:href="@{/admin/controle}" th:classappend="${ativo == 'controle'} ? 'active'">
+                    <i class="fas fa-plane-departure"></i> Sv. Externo</a>
+                <a th:href="@{/admin/troca}" th:classappend="${ativo == 'troca'} ? 'active'">
+                    <i class="fas fa-right-left"></i> Trocas</a>
+                <a th:href="@{/admin/feriados}" th:classappend="${ativo == 'feriados'} ? 'active'">
+                    <i class="fas fa-flag"></i> Feriados</a>
+                <a th:href="@{/admin/usuarios}" th:classappend="${ativo == 'usuarios'} ? 'active'">
+                    <i class="fas fa-user-shield"></i> Administradores</a>
+            </th:block>
+
+            <form sec:authorize="isAuthenticated()" th:action="@{/logout}" method="post" class="nav-sair">
+                <button type="submit"><i class="fas fa-arrow-right-from-bracket"></i> Sair</button>
+            </form>
+
+            <a sec:authorize="!isAuthenticated()" th:href="@{/login}" class="nav-entrar">
+                <i class="fas fa-lock"></i> Área Administrativa</a>
+        </nav>
+    </header>
+
+    <footer th:fragment="rodape" class="rodape">
+        <span>Sistema de Escala Militar &copy; 2026</span>
+        <span class="rodape-sep">·</span>
+        <span>Desenvolvido com Java por
+            <a href="https://www.linkedin.com/in/paulo-henrique-517268269" target="_blank" rel="noopener">Cb Tomaz</a></span>
+    </footer>
+
+</body>
+</html>

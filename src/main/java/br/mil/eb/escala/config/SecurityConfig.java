@@ -24,8 +24,8 @@ public class SecurityConfig {
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
         http
             .authorizeHttpRequests(authorize -> authorize
-                // CSS, JS e Imagens são públicos
-                .requestMatchers("/css/**", "/js/**", "/img/**").permitAll()
+                // CSS, JS, imagens e vídeos de fundo são públicos
+                .requestMatchers("/css/**", "/js/**", "/img/**", "/Img/**", "/videos/**").permitAll()
                 // Login é público
                 .requestMatchers("/login").permitAll()
                 // --- MUDANÇA AQUI ---

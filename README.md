@@ -125,6 +125,17 @@ Nesse modo o sistema:
 O modo de demonstração usa um banco H2 em memória, então não precisa de
 PostgreSQL nem das variáveis `DB_*`, e nunca toca no banco real.
 
+## Vídeo de fundo
+
+As telas têm um vídeo de fundo atrás de um véu verde-oliva (pensado para vídeos
+gerados no [Higgsfield](https://higgsfield.ai)). Para usar o seu:
+
+- coloque o MP4 em `src/main/resources/static/videos/fundo.mp4`, **ou**
+- defina a variável `APP_VIDEO_FUNDO` com o endereço público do vídeo.
+
+Sem vídeo, o sistema mostra só o gradiente. Quem prefere menos movimento
+(configuração do sistema operacional) também vê só o gradiente.
+
 ## Deploy
 
 O repositório tem um `Dockerfile`, então qualquer serviço que rode contêineres

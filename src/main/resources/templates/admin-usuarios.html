@@ -5,29 +5,12 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Admin - Gerenciar Usuários</title>
-    <link rel="stylesheet" th:href="@{/css/style.css}">
+    <th:block th:replace="~{fragments/layout :: recursos}"></th:block>
 </head>
-<body style="display: flex; flex-direction: column; min-height: 100vh; margin: 0;">
+<body>
+    <div th:replace="~{fragments/layout :: fundo}"></div>
 
-    <!-- Cabeçalho (Menu Completo com Feriados) -->
-    <header class="header">
-        <div class="logo">Permanência CSUP</div>
-        <nav>
-            <a th:href="@{/dashboard}">Escala</a>
-            <a th:href="@{/admin/novo-militar}">Cadastrar Militar</a>
-            <a th:href="@{/admin/afastar}">Impedimentos</a>
-            <a th:href="@{/admin/controle}">Sv.Externo</a>
-            <a th:href="@{/admin/troca}">Troca de Serviço</a>
-            <a th:href="@{/admin/feriados}">Feriados</a>
-            <a th:href="@{/admin/usuarios}" style="text-decoration: underline;">Administradores</a>
-            
-            <form th:action="@{/logout}" method="post" style="display: inline;">
-                <button type="submit" class="btn-primary" style="background: none; border: none; font-size: 1rem; margin-left: 1rem; cursor: pointer; color: white;">
-                    Sair
-                </button>
-            </form>
-        </nav>
-    </header>
+    <header th:replace="~{fragments/layout :: cabecalho('usuarios')}"></header>
 
     <!-- Conteúdo Principal - CENTRALIZADO e FLEXÍVEL -->
     <div class="main-container" style="flex: 1; display: flex; flex-direction: column; align-items: center; padding: 2rem 20px; box-sizing: border-box; width: 100%;">
@@ -152,12 +135,7 @@
     </div>
     
     <!-- Rodapé cravado no fundo -->
-    <footer style="text-align: center; padding: 20px; background-color: #f1f1f1; width: 100%; box-sizing: border-box;">
-        <p style="margin: 0; color: #333; font-size: 0.9rem;">
-            Sistema de Escala Militar &copy; 2026 <br>
-            Desenvolvido com Java por <a href="https://www.linkedin.com/in/paulo-henrique-517268269" target="_blank" style="color: #1a73e8; text-decoration: none;"><strong>Cb Tomaz</strong></a>
-        </p>
-    </footer>
+    <footer th:replace="~{fragments/layout :: rodape}"></footer>
 
 </body>
 </html>

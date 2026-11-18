@@ -4,298 +4,241 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Login - Escala de Serviço</title>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    
+    <th:block th:replace="~{fragments/layout :: recursos}"></th:block>
+
     <style>
-        :root {
-            --primary: #556B2F;      /* Verde Oliva */
-            --primary-dark: #3E4F22; /* Verde Escuro */
-            --text-main: #2D3748;    /* Cinzento Escuro */
-            --text-muted: #718096;   /* Cinzento Médio */
-            --bg-glass: rgba(255, 255, 255, 0.95);
-            --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
-            --radius: 12px;
-        }
+        body { flex-direction: row; }
 
-        body {
-            font-family: 'Inter', sans-serif;
-            margin: 0;
-            padding: 0;
-            display: flex;
-            /* MUDANÇA AQUI: flex-direction column força a empilhar um em cima do outro */
-            flex-direction: column; 
-            justify-content: center;
-            align-items: center;
+        .login-tela {
+            flex: 1;
+            display: grid;
+            grid-template-columns: 1.15fr minmax(380px, 0.85fr);
             min-height: 100vh;
-            /* Fundo com textura subtil e gradiente profissional */
-            background-image: 
-                url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23556b2f' fill-opacity='0.05'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E"),
-                linear-gradient(135deg, #F0F4F8 0%, #D3D9DE 100%);
-            background-color: #f7fafc;
         }
 
-        .login-container {
-            width: 100%;
-            padding: 20px;
-            display: flex;
-            justify-content: center;
-        }
-
-        .login-box {
-            background: var(--bg-glass);
-            padding: 3.5rem;
-            border-radius: var(--radius);
-            box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
-            width: 100%;
-            max-width: 420px;
-            text-align: center;
-            position: relative;
-            border: 1px solid rgba(255, 255, 255, 0.5);
-            animation: slideUp 0.6s cubic-bezier(0.16, 1, 0.3, 1);
-        }
-
-        .login-box::after {
-            content: '';
-            position: absolute;
-            top: 0;
-            left: 0;
-            right: 0;
-            height: 6px;
-            background: linear-gradient(90deg, var(--primary), #8FBC8F);
-            border-top-left-radius: var(--radius);
-            border-top-right-radius: var(--radius);
-        }
-
-        .login-header {
-            margin-bottom: 2.5rem;
-        }
-
-        .login-logo-img {
-            max-width: 120px;
-            height: auto;
-            margin-bottom: 1.5rem;
-            filter: drop-shadow(0 4px 6px rgba(0,0,0,0.1));
-        }
-
-        .login-header h1 {
-            color: var(--primary);
-            font-size: 1.75rem;
-            font-weight: 800;
-            margin: 0;
-            letter-spacing: -0.025em;
-            line-height: 1.2;
-        }
-
-        .login-header p {
-            color: var(--text-muted);
-            font-size: 0.95rem;
-            margin-top: 0.5rem;
-            font-weight: 500;
-        }
-
-        /* Estilo dos Inputs */
-        .form-group {
-            margin-bottom: 1.5rem;
-            text-align: left;
-        }
-
-        .form-group label {
-            display: block;
-            margin-bottom: 0.5rem;
-            font-weight: 600;
-            color: var(--text-main);
-            font-size: 0.9rem;
-        }
-
-        .input-wrapper {
+        /* ---------- Lado do vídeo ---------- */
+        .login-vitrine {
             position: relative;
             display: flex;
-            align-items: center;
-        }
-
-        .input-wrapper i {
-            position: absolute;
-            left: 16px;
-            color: #A0AEC0;
-            transition: color 0.2s;
-            font-size: 1rem;
-        }
-
-        .input-wrapper input {
-            width: 100%;
-            padding: 12px 16px 12px 48px;
-            border: 2px solid #E2E8F0;
-            border-radius: 8px;
-            font-size: 1rem;
-            color: var(--text-main);
-            transition: all 0.2s ease;
-            background-color: #F7FAFC;
-        }
-
-        .input-wrapper input:focus {
-            border-color: var(--primary);
-            background-color: #fff;
-            outline: none;
-            box-shadow: 0 0 0 3px rgba(85, 107, 47, 0.15);
-        }
-
-        .input-wrapper input:focus + i {
-            color: var(--primary);
-        }
-
-        /* Botão Entrar */
-        .btn-login {
-            width: 100%;
-            padding: 14px;
-            border: none;
-            border-radius: 8px;
-            background-color: var(--primary);
+            flex-direction: column;
+            justify-content: space-between;
+            padding: clamp(1.5rem, 4vw, 3.5rem);
             color: #fff;
-            font-size: 1rem;
+        }
+        .login-marca { display: flex; align-items: center; gap: 0.8rem; }
+        .login-marca .logo-insignia { width: 48px; height: 48px; font-size: 1.3rem; }
+        .login-marca strong {
+            font-family: var(--fonte-titulo);
+            font-size: 1.5rem;
+            letter-spacing: 0.1em;
+            text-transform: uppercase;
+        }
+        .login-chamada { max-width: 620px; animation: subir .9s cubic-bezier(.16,1,.3,1) .1s both; }
+        .login-chamada .selo {
+            display: inline-block;
+            padding: 0.35rem 0.8rem;
+            border-radius: 999px;
+            border: 1px solid rgba(201, 165, 76, 0.5);
+            color: var(--latao-claro);
+            font-size: 0.75rem;
             font-weight: 600;
-            cursor: pointer;
-            transition: all 0.2s ease;
+            letter-spacing: 0.14em;
+            text-transform: uppercase;
+        }
+        .login-chamada h1 {
+            margin: 1rem 0;
+            font-family: var(--fonte-titulo);
+            font-size: clamp(2.8rem, 6.5vw, 5.4rem);
+            line-height: 0.92;
+            text-transform: uppercase;
+        }
+        .login-chamada h1 span { color: var(--latao); }
+        .login-chamada p { color: rgba(255, 255, 255, 0.72); font-size: 1.05rem; line-height: 1.6; margin: 0; }
+        .login-pontos {
+            display: flex; flex-wrap: wrap; gap: 0.6rem 1.5rem;
+            margin-top: 1.75rem; padding: 0; list-style: none;
+            color: rgba(255, 255, 255, 0.8); font-size: 0.9rem;
+        }
+        .login-pontos i { color: var(--latao); margin-right: 0.4rem; }
+        .login-rodape { color: rgba(255, 255, 255, 0.5); font-size: 0.85rem; }
+        .login-rodape a { color: var(--latao-claro); font-weight: 600; text-decoration: none; }
+
+        /* ---------- Lado do formulário ---------- */
+        .login-painel {
             display: flex;
             align-items: center;
             justify-content: center;
-            gap: 10px;
-            margin-top: 1rem;
-            box-shadow: 0 4px 6px rgba(85, 107, 47, 0.2);
+            padding: 2rem clamp(1.25rem, 4vw, 3rem);
+            background: rgba(246, 245, 239, 0.96);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            box-shadow: -30px 0 60px -30px rgba(0, 0, 0, 0.6);
         }
-
-        .btn-login:hover {
-            background-color: var(--primary-dark);
-            transform: translateY(-1px);
-            box-shadow: 0 6px 8px rgba(85, 107, 47, 0.3);
+        .login-box {
+            width: 100%;
+            max-width: 400px;
+            animation: subir .7s cubic-bezier(.16,1,.3,1) both;
         }
-
-        .btn-login:active {
-            transform: translateY(0);
+        .login-box h2 {
+            margin: 0;
+            font-family: var(--fonte-titulo);
+            font-size: 2.2rem;
+            text-transform: uppercase;
+            color: var(--oliva-800);
         }
+        .login-box .sub { margin: 0.35rem 0 2rem; color: var(--texto-suave); }
 
-        /* Footer Interno (Suporte) */
-        .login-footer {
-            margin-top: 2rem;
-            padding-top: 1.5rem;
-            border-top: 1px solid #EDF2F7;
-            font-size: 0.85rem;
-            color: var(--text-muted);
-        }
-
-        /* MENSAGENS DE ERRO */
-        .error-message, .success-message {
-            padding: 12px 16px;
-            border-radius: 8px;
-            font-size: 0.9rem;
+        .demo-aviso {
+            display: flex; gap: 0.75rem;
+            padding: 0.9rem 1rem;
             margin-bottom: 1.5rem;
-            display: flex;
-            align-items: center;
-            gap: 12px;
-            text-align: left;
-            font-weight: 500;
-            animation: fadeIn 0.4s ease;
+            border-radius: 12px;
+            background: rgba(201, 165, 76, 0.14);
+            border: 1px solid rgba(201, 165, 76, 0.45);
+            color: var(--texto);
+            font-size: 0.9rem;
+            line-height: 1.5;
+        }
+        .demo-aviso i { color: #9A7A2A; margin-top: 0.2rem; }
+        .demo-aviso code {
+            padding: 0.1rem 0.4rem; border-radius: 4px;
+            background: #fff; border: 1px solid #E3D6B0; font-weight: 600;
         }
 
-        .error-message { background-color: #FFF5F5; color: #C53030; border: 1px solid #FED7D7; }
-        .success-message { background-color: #F0FFF4; color: #2F855A; border: 1px solid #C6F6D5; }
+        .campo { position: relative; }
+        .campo i {
+            position: absolute; left: 14px; top: 50%; transform: translateY(-50%);
+            color: #9AA08F; pointer-events: none; transition: color .2s;
+        }
+        .campo input {
+            width: 100%;
+            padding: 0.9rem 1rem 0.9rem 2.7rem !important;
+            border: 1.5px solid #D6D8CC !important;
+            border-radius: 12px !important;
+            background: #fff;
+            font: 500 1rem var(--fonte);
+            color: var(--texto);
+            transition: border-color .2s, box-shadow .2s;
+        }
+        .campo input:focus { border-color: var(--oliva-500) !important; outline: none; box-shadow: 0 0 0 4px rgba(85,107,47,.15); }
+        .campo input:focus ~ i { color: var(--oliva-500); }
 
-        /* MUDANÇA AQUI: Estilizando a assinatura do Dev para ficar flutuante embaixo da caixa */
-        .dev-signature {
-            margin-top: 20px;
-            text-align: center;
-            color: var(--text-muted);
-            font-size: 0.85rem;
-            animation: fadeIn 1s ease 0.5s both; /* Aparece suavemente um pouco depois da caixa */
+        .btn-entrar {
+            display: flex; align-items: center; justify-content: center; gap: 0.6rem;
+            width: 100%;
+            margin-top: 1.5rem;
+            padding: 1rem;
+            border: none;
+            border-radius: 12px;
+            background: linear-gradient(135deg, var(--oliva-500), var(--oliva-600));
+            color: #fff;
+            font: 700 1rem var(--fonte);
+            letter-spacing: 0.04em;
+            text-transform: uppercase;
+            cursor: pointer;
+            box-shadow: 0 12px 24px -10px rgba(62, 76, 44, 0.8);
+            transition: transform .15s, box-shadow .2s;
         }
-        
-        .dev-signature a {
-            color: var(--primary);
-            text-decoration: none;
-            font-weight: 600;
-            transition: color 0.2s;
+        .btn-entrar:hover { transform: translateY(-2px); box-shadow: 0 16px 28px -10px rgba(62, 76, 44, 0.9); }
+
+        .login-ajuda {
+            margin-top: 2rem; padding-top: 1.25rem;
+            border-top: 1px solid var(--borda);
+            color: var(--texto-suave); font-size: 0.85rem; text-align: center;
         }
-        
-        .dev-signature a:hover {
-            color: var(--primary-dark);
-            text-decoration: underline;
+        .login-voltar {
+            display: inline-flex; align-items: center; gap: 0.4rem;
+            margin-top: 0.75rem; color: var(--oliva-500); font-weight: 600; text-decoration: none;
         }
 
-        @keyframes slideUp {
-            from { opacity: 0; transform: translateY(40px); }
-            to { opacity: 1; transform: translateY(0); }
-        }
-        
-        @keyframes fadeIn {
-            from { opacity: 0; }
-            to { opacity: 1; }
+        @media (max-width: 900px) {
+            .login-tela { grid-template-columns: 1fr; }
+            .login-vitrine { min-height: 46vh; }
+            .login-chamada h1 { font-size: 2.6rem; }
+            .login-pontos, .login-rodape { display: none; }
+            .login-painel { box-shadow: 0 -30px 60px -30px rgba(0,0,0,.6); border-radius: 24px 24px 0 0; }
         }
     </style>
 </head>
-<body class="login-body">
+<body>
+    <div th:replace="~{fragments/layout :: fundo}"></div>
 
-    <div class="login-container">
-        <div class="login-box">
-            
-            <div class="login-header">
-               <img src="https://cdn-icons-png.flaticon.com/512/6142/6142078.png" 
-     alt="Soldado" 
-     class="login-logo-img"
-     style="width: 150px;">
-                
-                <h1>Escala de Serviço</h1>
-                <p>Gestão Administrativa de Pessoal</p>
+    <div class="login-tela">
+        <section class="login-vitrine">
+            <div class="login-marca">
+                <span class="logo-insignia"><i class="fas fa-shield-halved"></i></span>
+                <strong>Permanência CSUP</strong>
             </div>
 
-            <div th:if="${@environment.matchesProfiles('demo')}"
-                 style="background:#EEF5E6;border:1px solid #556B2F;border-radius:8px;padding:12px;margin-bottom:1.5rem;text-align:left;font-size:0.9rem;color:#2D3748;">
-                <strong>Versão de demonstração</strong><br>
-                Entre com usuário <code>demo</code> e senha <code>demo</code>.
-                Os dados são fictícios e voltam ao original a cada hora.
+            <div class="login-chamada">
+                <span class="selo">Escala de Serviço</span>
+                <h1>Missão dada,<br><span>escala pronta.</span></h1>
+                <p>Quem tira o serviço hoje, quem é o reserva e quem está afastado — calculado
+                   automaticamente por folga, feriados e trocas.</p>
+                <ul class="login-pontos">
+                    <li><i class="fas fa-bolt"></i>Cálculo automático</li>
+                    <li><i class="fas fa-moon"></i>Virada à meia-noite</li>
+                    <li><i class="fas fa-right-left"></i>Trocas e permutas</li>
+                </ul>
             </div>
 
-            <div th:if="${param.error}" class="error-message">
-                <i class="fas fa-exclamation-circle fa-lg"></i> 
-                <span>Credenciais inválidas. Verifique o seu utilizador e senha.</span>
+            <div class="login-rodape">
+                Sistema de Escala Militar &copy; 2026 · Desenvolvido com Java por
+                <a href="https://www.linkedin.com/in/paulo-henrique-517268269" target="_blank" rel="noopener">Cb Tomaz</a>
             </div>
-            <div th:if="${param.logout}" class="success-message">
-                <i class="fas fa-check-circle fa-lg"></i> 
-                <span>Logout realizado com sucesso.</span>
-            </div>
+        </section>
 
-            <form th:action="@{/login}" method="post">
-                <div class="form-group">
-                    <label for="username">Utilizador</label>
-                    <div class="input-wrapper">
-                        <input type="text" id="username" name="username" placeholder="Ex: Nome De Guerra" autocomplete="username" required>
-                        <i class="fas fa-user"></i>
+        <section class="login-painel">
+            <div class="login-box">
+                <h2>Acesso restrito</h2>
+                <p class="sub">Gestão administrativa de pessoal</p>
+
+                <div th:if="${@environment.matchesProfiles('demo')}" class="demo-aviso">
+                    <i class="fas fa-circle-info"></i>
+                    <div>
+                        <strong>Versão de demonstração</strong><br>
+                        Entre com usuário <code>demo</code> e senha <code>demo</code>.
+                        Os dados são fictícios e voltam ao original a cada hora.
                     </div>
                 </div>
-                
-                <div class="form-group">
-                    <label for="password">Senha</label>
-                    <div class="input-wrapper">
-                        <input type="password" id="password" name="password" placeholder="••••••••" autocomplete="current-password" required>
-                        <i class="fas fa-lock"></i>
-                    </div>
+
+                <div th:if="${param.error}" class="error-message">
+                    <i class="fas fa-circle-exclamation"></i>
+                    <span>Credenciais inválidas. Verifique seu usuário e senha.</span>
                 </div>
-                
-                <button type="submit" class="btn-login">
-                    Acessar Sistema <i class="fas fa-arrow-right-to-bracket"></i>
-                </button>
-            </form>
+                <div th:if="${param.logout}" class="success-message">
+                    <i class="fas fa-circle-check"></i>
+                    <span>Logout realizado com sucesso.</span>
+                </div>
 
-             
-            <div class="login-footer">
-                <p>Precisa de suporte técnico? Contacte a <strong>Secção de TI</strong>.</p>
+                <form th:action="@{/login}" method="post">
+                    <div class="form-group">
+                        <label for="username">Usuário</label>
+                        <div class="campo">
+                            <input type="text" id="username" name="username" placeholder="Nome de guerra" autocomplete="username" required autofocus>
+                            <i class="fas fa-user"></i>
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="password">Senha</label>
+                        <div class="campo">
+                            <input type="password" id="password" name="password" placeholder="••••••••" autocomplete="current-password" required>
+                            <i class="fas fa-lock"></i>
+                        </div>
+                    </div>
+
+                    <button type="submit" class="btn-entrar">
+                        Acessar sistema <i class="fas fa-arrow-right"></i>
+                    </button>
+                </form>
+
+                <div class="login-ajuda">
+                    Precisa de suporte técnico? Contate a <strong>Seção de TI</strong>.<br>
+                    <a th:href="@{/dashboard}" class="login-voltar"><i class="fas fa-arrow-left"></i> Ver painel público</a>
+                </div>
             </div>
-        </div>
+        </section>
     </div>
-    
-    <div class="dev-signature">
-        Sistema de Escala Militar &copy; 2026 <br>
-        Desenvolvido com Java por <a href="https://www.linkedin.com/in/paulo-henrique-517268269" target="_blank">Cb Tomaz</a>
-    </div>
-
 </body>
 </html>
