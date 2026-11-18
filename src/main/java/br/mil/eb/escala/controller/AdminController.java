@@ -189,10 +189,8 @@ public class AdminController {
         model.addAttribute("tiposTroca", TipoTroca.values());
         model.addAttribute("trocasHoje", escalaService.getTrocasDeHoje());
         model.addAttribute("historico", escalaService.getHistoricoDeTrocas());
-        // Só aparece para entrar quem pode tirar o serviço hoje (fora o titular original)
-        model.addAttribute("listaMilitaresAtivos", escalaService.getMilitaresOrdenadosParaEscala().stream()
-                .filter(m -> titularOriginal == null || !m.getId().equals(titularOriginal.getId()))
-                .toList());
+        // O ADM escolhe qualquer militar para sair e para entrar (as regras são conferidas ao salvar)
+        model.addAttribute("efetivo", escalaService.getTodosMilitaresParaDashboard());
         model.addAttribute("hoje", LocalDate.now());
         return "admin-troca";
     }

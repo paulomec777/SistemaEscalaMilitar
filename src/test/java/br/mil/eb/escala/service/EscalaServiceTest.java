@@ -377,14 +377,62 @@ class EscalaServiceTest {
     }
 
     @Test
-    void trocaRecusadaSeOTitularMudouComATelaAberta() {
+    void trocaEntreQuemNaoEstaDeServicoMexeSoNaFila() {
+        assumeTrue(hojeEhDiaUtil());
+        Militar alves = comBusca(militar(1, "Alves", 9, hoje.minusDays(9)));
+        Militar barros = comBusca(militar(2, "Barros", 5, hoje.minusDays(5)));
+        Militar cardoso = comBusca(militar(3, "Cardoso", 3, hoje.minusDays(3)));
+
+        Troca troca = escalaService.processarTroca(2L, 3L, TipoTroca.PERMUTA, "adm");
+
+        assertFalse(troca.isServicoDeHoje());
+        assertEquals(alves, escalaService.getProximoPermanencia()); // serviço de hoje não mudou
+        assertEquals(3, barros.getFolga());
+        assertEquals(hoje.minusDays(3), barros.getDataUltimoServico());
+        assertEquals(5, cardoso.getFolga());
+        assertEquals(hoje.minusDays(5), cardoso.getDataUltimoServico());
+    }
+
+    @Test
+    void trocaSoNaFilaPorMissaoEPagoZeraNaVirada() {
+        assumeTrue(hojeEhDiaUtil());
+        comBusca(militar(1, "Alves", 9, hoje.minusDays(9)));
+        Militar barros = comBusca(militar(2, "Barros", 5, hoje.minusDays(5)));
+        Militar cardoso = comBusca(militar(3, "Cardoso", 3, hoje.minusDays(3)));
+        Militar duarte = comBusca(militar(4, "Duarte", 2, hoje.minusDays(2)));
+
+        escalaService.processarTroca(2L, 3L, TipoTroca.MISSAO, "adm"); // Cardoso cumpre pelo Barros
+        escalaService.processarTroca(4L, 3L, TipoTroca.PAGO, "adm");   // Duarte paga ao Cardoso
+
+        assertFalse(barros.isPagouServico());
+        assertTrue(cardoso.isPagouServico());
+        assertTrue(duarte.isPagouServico());
+    }
+
+    @Test
+    void trocaSoNaFilaNaoPodeEnvolverQuemEstaDeServico() {
         assumeTrue(hojeEhDiaUtil());
         comBusca(militar(1, "Alves", 9, hoje.minusDays(9)));
         comBusca(militar(2, "Barros", 5, hoje.minusDays(5)));
-        comBusca(militar(3, "Cardoso", 3, hoje.minusDays(3)));
 
-        // a tela dizia que o titular era o Barros, mas é o Alves
-        assertThrows(RegraNegocioException.class, () -> escalaService.processarTroca(2L, 3L, TipoTroca.MISSAO, "adm"));
+        assertThrows(RegraNegocioException.class, () -> escalaService.processarTroca(2L, 1L, TipoTroca.PERMUTA, "adm"));
+    }
+
+    @Test
+    void novaTrocaDoServicoNaoDesfazTrocaDaFila() {
+        assumeTrue(hojeEhDiaUtil());
+        comBusca(militar(1, "Alves", 9, hoje.minusDays(9)));
+        Militar barros = comBusca(militar(2, "Barros", 5, hoje.minusDays(5)));
+        comBusca(militar(3, "Cardoso", 3, hoje.minusDays(3)));
+        Militar duarte = comBusca(militar(4, "Duarte", 2, hoje.minusDays(2)));
+
+        escalaService.processarTroca(2L, 3L, TipoTroca.PERMUTA, "adm"); // só fila
+        escalaService.processarTroca(1L, 4L, TipoTroca.MISSAO, "adm");  // serviço de hoje
+        escalaService.processarTroca(1L, 4L, TipoTroca.PAGO, "adm");    // refaz o serviço de hoje
+
+        assertEquals(3, barros.getFolga());                 // a troca da fila continua valendo
+        assertEquals(duarte, escalaService.getProximoPermanencia());
+        assertEquals(2, escalaService.getTrocasDeHoje().size());
     }
 
     @Test

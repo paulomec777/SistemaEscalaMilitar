@@ -48,6 +48,12 @@ public class Troca {
     private int entraFolgaAntes;
     private LocalDate entraDataUltimoServicoAntes;
     private boolean entraServicoPagoAntes;
+    private boolean entraPagouServicoAntes;
+
+    // true = mudou quem tira o serviço de hoje (quem saiu era o titular);
+    // false = troca só na fila (folgas), sem mexer no serviço de hoje
+    @Column(columnDefinition = "boolean default true")
+    private boolean servicoDeHoje = true;
 
     @Column(columnDefinition = "boolean default false")
     private boolean desfeita = false;

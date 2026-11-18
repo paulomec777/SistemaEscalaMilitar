@@ -57,27 +57,32 @@
             </div>
 
             <form th:if="${motivoBloqueio == null}" th:action="@{/admin/salvar-troca}" method="post">
-                <!-- Quem sai é sempre o titular de hoje -->
-                <input type="hidden" name="militarSaiId" th:value="${titularHoje.id}">
-
                 <div class="troca-lados">
                     <div class="troca-lado sai">
-                        <span class="troca-rotulo"><i class="fas fa-arrow-right-from-bracket"></i> Sai do serviço (escalado pelo sistema)</span>
-                        <strong th:text="${titularHoje.graduacao + ' ' + titularHoje.nomeGuerra}">3º Sgt Alves</strong>
-                        <small th:text="${'Folga atual: ' + titularHoje.folga}">Folga atual: 9</small>
+                        <label for="militarSaiId" class="troca-rotulo"><i class="fas fa-arrow-right-from-bracket"></i> Sai do serviço</label>
+                        <select id="militarSaiId" name="militarSaiId" required>
+                            <option th:each="militar : ${efetivo}"
+                                    th:value="${militar.id}"
+                                    th:selected="${titularHoje != null and militar.id == titularHoje.id}"
+                                    th:text="${militar.graduacao + ' ' + militar.nomeGuerra + (titularHoje != null and militar.id == titularHoje.id ? ' — titular de hoje' : ' (folga ' + militar.folga + ')')}">3º Sgt Alves</option>
+                        </select>
+                        <small>Já vem com o titular de hoje.</small>
                     </div>
                     <i class="fas fa-right-left troca-seta"></i>
                     <div class="troca-lado entra">
                         <label for="militarEntraId" class="troca-rotulo"><i class="fas fa-arrow-right-to-bracket"></i> Entra no serviço</label>
                         <select id="militarEntraId" name="militarEntraId" required>
                             <option value="">-- Escolha quem assume --</option>
-                            <option th:each="militar : ${listaMilitaresAtivos}"
+                            <option th:each="militar : ${efetivo}"
                                     th:value="${militar.id}"
-                                    th:text="${militar.graduacao + ' ' + militar.nomeGuerra + ' (folga ' + militar.folga + ')'}">Cb Duarte</option>
+                                    th:text="${militar.graduacao + ' ' + militar.nomeGuerra + ' (folga ' + militar.folga + ')' + (militar.status != 'APTO' ? ' — ' + militar.status : '')}">Cb Duarte</option>
                         </select>
-                        <small>Só aparece quem pode tirar serviço hoje.</small>
                     </div>
                 </div>
+
+                <p class="troca-nota" id="nota-fila" hidden>
+                    <i class="fas fa-list-ol"></i> Quem sai não é o titular de hoje: esta troca muda <strong>só a fila (folgas)</strong>, não quem está de serviço hoje.
+                </p>
 
                 <div class="troca-tipos">
                     <span class="troca-rotulo">Tipo da troca</span>
@@ -120,7 +125,10 @@
                                 <span th:text="${#temporals.format(t.data, 'dd/MM/yyyy')}">17/11/2026</span>
                                 <div th:if="${t.criadoEm != null}" th:text="${#temporals.format(t.criadoEm, 'HH:mm')}" style="font-size: 0.8rem; color: var(--texto-suave);">14:20</div>
                             </td>
-                            <td th:text="${t.tipo.rotulo}">Missão</td>
+                            <td>
+                                <span th:text="${t.tipo.rotulo}">Missão</span>
+                                <div th:if="${!t.servicoDeHoje}" style="font-size: 0.75rem; color: var(--texto-suave);">só na fila</div>
+                            </td>
                             <td th:text="${t.sai.graduacao + ' ' + t.sai.nomeGuerra}">Sgt Alves</td>
                             <td th:text="${t.entra.graduacao + ' ' + t.entra.nomeGuerra}">Cb Duarte</td>
                             <td th:text="${t.autor}">root</td>
@@ -140,5 +148,16 @@
     </div>
 
     <footer th:replace="~{fragments/layout :: rodape}"></footer>
+    <script th:if="${titularHoje != null}" th:inline="javascript">
+        (function () {
+            var titularId = /*[[${titularHoje.id}]]*/ 0;
+            var sai = document.getElementById('militarSaiId');
+            var nota = document.getElementById('nota-fila');
+            if (!sai || !nota) return;
+            function atualizar() { nota.hidden = String(sai.value) === String(titularId); }
+            sai.addEventListener('change', atualizar);
+            atualizar();
+        })();
+    </script>
 </body>
 </html>
