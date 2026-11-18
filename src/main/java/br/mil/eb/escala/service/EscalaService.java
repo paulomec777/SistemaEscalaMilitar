@@ -1,7 +1,9 @@
 package br.mil.eb.escala.service;
 
+import br.mil.eb.escala.dto.DiaEscala;
 import br.mil.eb.escala.model.Feriado;
 import br.mil.eb.escala.model.Militar;
+import br.mil.eb.escala.model.Missao;
 import br.mil.eb.escala.model.Usuario;
 import br.mil.eb.escala.repository.FeriadoRepository;
 import br.mil.eb.escala.repository.MilitarRepository;
@@ -15,8 +17,12 @@ import org.springframework.stereotype.Service;
 import java.time.DayOfWeek;
 import java.time.LocalDate;
 import java.time.temporal.ChronoUnit;
+import java.util.ArrayList;
 import java.util.Comparator;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
+import java.util.Set;
 import java.util.stream.Collectors;
 
 @Service
@@ -26,14 +32,17 @@ public class EscalaService {
     @Autowired private FeriadoRepository feriadoRepository;
     @Autowired private UsuarioRepository usuarioRepository;
     @Autowired private PasswordEncoder passwordEncoder;
+    @Autowired private MissaoService missaoService;
 
     public List<Militar> getMilitaresOrdenadosParaEscala() {
         LocalDate hoje = LocalDate.now();
         LocalDate ontem = hoje.minusDays(1);
         List<Militar> todos = militarRepository.findAll();
+        Set<Long> emMissao = missaoService.idsEmMissao(hoje);
         
         return todos.stream()
                 .filter(m -> m.estaAptoParaServico(hoje))
+                .filter(m -> !emMissao.contains(m.getId()))
                 .filter(m -> m.getDataUltimoServico() == null || !m.getDataUltimoServico().equals(ontem)) 
                 .sorted(Comparator.comparing(Militar::getFolga).reversed()
                         .thenComparing(Militar::getDataUltimoServico, Comparator.nullsFirst(Comparator.naturalOrder())))
@@ -57,14 +66,17 @@ public class EscalaService {
     }
     
     public Militar getProximoSubstituto() {
-        List<Militar> ordenados = getMilitaresOrdenadosParaEscala();
-        return ordenados.size() < 2 ? null : ordenados.get(1); 
+        Militar titular = getProximoPermanencia();
+        return getMilitaresOrdenadosParaEscala().stream()
+                .filter(m -> titular == null || !m.getId().equals(titular.getId()))
+                .findFirst()
+                .orElse(null);
     }
 
     public List<Militar> getTodosMilitaresParaDashboard() {
         return militarRepository.findAll().stream()
                 .sorted(Comparator.comparing(Militar::isAtivoNaEscala).reversed()
-                        .thenComparing(Militar::getFolga).reversed())
+                        .thenComparing(Militar::getFolga, Comparator.reverseOrder()))
                 .collect(Collectors.toList());
     }
 
@@ -175,7 +187,10 @@ public class EscalaService {
     }
     
     public void deletarMilitar(Long id) {
-        if (militarRepository.existsById(id)) militarRepository.deleteById(id);
+        if (militarRepository.existsById(id)) {
+            missaoService.removerMilitarDasMissoes(id);
+            militarRepository.deleteById(id);
+        }
     }
 
     public void afastarMilitar(Long id, String motivo, LocalDate inicio, LocalDate fim) {
@@ -284,5 +299,153 @@ public class EscalaService {
     @Transactional
     public void deletarUsuario(Long id) {
         if (usuarioRepository.existsById(id)) usuarioRepository.deleteById(id);
+    }
+
+    // =====================================================================
+    // MAPA SEMANAL: projeta a escala dia a dia, simulando a virada da meia-noite
+    // =====================================================================
+
+    /**
+     * Monta os 7 dias da semana que começa em {@code segunda}.
+     * Dias passados mostram quem tirou serviço (quando há registro).
+     * Hoje usa a escala real (inclui trocas manuais).
+     * Dias futuros são simulados com as mesmas regras do motor da meia-noite.
+     */
+    public List<DiaEscala> projetarSemana(LocalDate segunda) {
+        LocalDate domingo = segunda.plusDays(6);
+        LocalDate hoje = LocalDate.now();
+        LocalDate inicioBusca = segunda.isBefore(hoje) ? segunda : hoje;
+
+        List<Militar> todos = militarRepository.findAll();
+        Map<LocalDate, List<Missao>> missoesPorDia = missaoService.missoesDoPeriodo(inicioBusca, domingo).stream()
+                .collect(Collectors.groupingBy(Missao::getData));
+        Map<LocalDate, String> feriados = feriadoRepository.findAll().stream()
+                .filter(f -> !f.getData().isBefore(inicioBusca) && !f.getData().isAfter(domingo))
+                .collect(Collectors.toMap(Feriado::getData, Feriado::getDescricao, (a, b) -> a));
+
+        Map<LocalDate, Militar[]> escalaProjetada = simularEscala(todos, hoje, domingo, missoesPorDia);
+
+        List<DiaEscala> semana = new ArrayList<>();
+        for (LocalDate d = segunda; !d.isAfter(domingo); d = d.plusDays(1)) {
+            final LocalDate dia = d;
+            boolean expediente = isDiaUtil(dia);
+            Militar titular = null;
+            Militar reserva = null;
+
+            if (dia.isBefore(hoje)) {
+                titular = todos.stream()
+                        .filter(m -> dia.equals(m.getDataUltimoServico()))
+                        .findFirst().orElse(null);
+            } else if (escalaProjetada.containsKey(dia)) {
+                titular = escalaProjetada.get(dia)[0];
+                reserva = escalaProjetada.get(dia)[1];
+            }
+
+            List<Militar> afastados = todos.stream().filter(m -> estaAfastadoEm(m, dia)).toList();
+            List<Militar> externos = todos.stream().filter(m -> estaEmServicoExternoEm(m, dia)).toList();
+
+            semana.add(new DiaEscala(dia, expediente, feriados.get(dia), titular, reserva,
+                    missoesPorDia.getOrDefault(dia, List.of()), afastados, externos));
+        }
+        return semana;
+    }
+
+    /** Simula de hoje até {@code ate}. Retorna, por dia útil, [titular, reserva]. */
+    private Map<LocalDate, Militar[]> simularEscala(List<Militar> todos, LocalDate hoje, LocalDate ate,
+                                                    Map<LocalDate, List<Missao>> missoesPorDia) {
+        Map<LocalDate, Militar[]> resultado = new HashMap<>();
+        if (ate.isBefore(hoje)) return resultado;
+
+        // Estado simulado (não mexe no banco)
+        Map<Long, Integer> folga = new HashMap<>();
+        Map<Long, LocalDate> ultimoServico = new HashMap<>();
+        Map<Long, Boolean> servicoPago = new HashMap<>();
+        for (Militar m : todos) {
+            folga.put(m.getId(), m.getFolga());
+            ultimoServico.put(m.getId(), m.getDataUltimoServico());
+            servicoPago.put(m.getId(), m.isServicoPagoTemporario());
+        }
+
+        for (LocalDate d = hoje; !d.isAfter(ate); d = d.plusDays(1)) {
+            final LocalDate dia = d;
+            final LocalDate ontem = d.minusDays(1);
+
+            if (dia.isAfter(hoje)) {
+                // Mesma regra do avancarDiaDaEscala()
+                boolean ontemFoiUtil = isDiaUtil(ontem);
+                for (Militar m : todos) {
+                    Long id = m.getId();
+                    if (ontemFoiUtil && ontem.equals(ultimoServico.get(id))) {
+                        if (servicoPago.get(id)) {
+                            folga.put(id, folga.get(id) + 1);
+                            servicoPago.put(id, false);
+                        } else {
+                            folga.put(id, 0);
+                        }
+                    } else {
+                        folga.put(id, folga.get(id) + 1);
+                    }
+                }
+            }
+
+            if (!isDiaUtil(dia)) continue; // fim de semana e feriado: sem permanência
+
+            Militar titular;
+            Militar reserva;
+            if (dia.isEqual(hoje)) {
+                titular = getProximoPermanencia();
+                reserva = getProximoSubstituto();
+            } else {
+                Set<Long> emMissao = missoesPorDia.getOrDefault(dia, List.of()).stream()
+                        .flatMap(mi -> mi.getMilitares().stream())
+                        .map(Militar::getId)
+                        .collect(Collectors.toSet());
+
+                List<Militar> candidatos = todos.stream()
+                        .filter(m -> estaAptoNaData(m, dia))
+                        .filter(m -> !emMissao.contains(m.getId()))
+                        .filter(m -> !ontem.equals(ultimoServico.get(m.getId())))
+                        .sorted(Comparator.comparing((Militar m) -> folga.get(m.getId()), Comparator.reverseOrder())
+                                .thenComparing(m -> ultimoServico.get(m.getId()),
+                                        Comparator.nullsFirst(Comparator.naturalOrder())))
+                        .toList();
+                titular = candidatos.isEmpty() ? null : candidatos.get(0);
+                reserva = candidatos.size() < 2 ? null : candidatos.get(1);
+            }
+
+            if (titular != null) ultimoServico.put(titular.getId(), dia);
+            resultado.put(dia, new Militar[]{titular, reserva});
+        }
+        return resultado;
+    }
+
+    /** Aptidão numa data futura, já considerando que afastamentos vencidos são reativados. */
+    private boolean estaAptoNaData(Militar m, LocalDate data) {
+        if (!m.isDisponivelManualmente()) return false;
+        if (!m.isAtivoNaEscala()
+                && (m.getDataFimAfastamento() == null || !data.isAfter(m.getDataFimAfastamento()))) {
+            return false;
+        }
+        if (estaAfastadoEm(m, data)) return false;
+        if (m.getDataInicioServicoExterno() != null && m.getDataFimServicoExterno() != null
+                && !data.isBefore(m.getDataInicioServicoExterno())
+                && !data.isAfter(m.getDataFimServicoExterno().plusDays(1))) { // regra das 48h
+            return false;
+        }
+        return true;
+    }
+
+    private boolean estaAfastadoEm(Militar m, LocalDate data) {
+        if (!m.isDisponivelManualmente()) return true;
+        if (m.getDataInicioAfastamento() != null && m.getDataFimAfastamento() != null) {
+            return !data.isBefore(m.getDataInicioAfastamento()) && !data.isAfter(m.getDataFimAfastamento());
+        }
+        return !m.isAtivoNaEscala();
+    }
+
+    private boolean estaEmServicoExternoEm(Militar m, LocalDate data) {
+        return m.getDataInicioServicoExterno() != null && m.getDataFimServicoExterno() != null
+                && !data.isBefore(m.getDataInicioServicoExterno())
+                && !data.isAfter(m.getDataFimServicoExterno());
     }
 }

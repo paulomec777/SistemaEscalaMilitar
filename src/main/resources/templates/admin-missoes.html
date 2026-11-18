@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html lang="pt-br" xmlns:th="http://www.thymeleaf.org"
+      xmlns:sec="http://www.thymeleaf.org/extras/spring-security">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin - Missões</title>
+    <th:block th:replace="~{fragments/layout :: recursos}"></th:block>
+    <style>
+        .escolha-militares {
+            display: grid; grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)); gap: 0.5rem;
+            max-height: 280px; overflow-y: auto; padding: 0.25rem;
+        }
+        .escolha-militares label {
+            display: flex !important; align-items: center; gap: 0.55rem; margin: 0 !important;
+            padding: 0.6rem 0.75rem; border-radius: 10px; border: 1.5px solid #D6D8CC; background: #fff;
+            text-transform: none !important; letter-spacing: 0 !important; font-size: 0.9rem !important;
+            color: var(--texto) !important; cursor: pointer; transition: border-color .15s, background-color .15s;
+        }
+        .escolha-militares label:hover { border-color: var(--oliva-400); }
+        .escolha-militares input { width: auto !important; accent-color: var(--oliva-500); }
+        .escolha-militares label:has(input:checked) { border-color: var(--oliva-500); background: rgba(85,107,47,0.08); }
+        .escolha-militares .indisponivel { opacity: 0.55; }
+        .escolha-militares small { margin-left: auto; font-size: 0.68rem; font-weight: 700; color: #A8322C; text-transform: uppercase; }
+
+        .chave-urgente {
+            display: flex !important; align-items: center; gap: 0.75rem; margin: 0 !important;
+            padding: 0.9rem 1rem; border-radius: 12px; border: 1.5px dashed rgba(200,66,59,0.5);
+            background: rgba(200,66,59,0.05); cursor: pointer;
+            text-transform: none !important; letter-spacing: 0 !important; font-size: 0.95rem !important; color: var(--texto) !important;
+        }
+        .chave-urgente input { width: 20px !important; height: 20px; accent-color: var(--perigo); }
+        .chave-urgente:has(input:checked) { border-style: solid; border-color: var(--perigo); background: rgba(200,66,59,0.1); }
+        .chave-urgente i { color: var(--perigo); }
+    </style>
+</head>
+<body>
+    <div th:replace="~{fragments/layout :: fundo}"></div>
+    <header th:replace="~{fragments/layout :: cabecalho('missoes')}"></header>
+
+    <main class="main-container" style="max-width: 1100px;">
+
+        <div th:if="${mensagem != null}" class="flash flash-ok"><i class="fas fa-circle-check"></i> <span th:text="${mensagem}"></span></div>
+        <div th:if="${erro != null}" class="flash flash-erro"><i class="fas fa-circle-exclamation"></i> <span th:text="${erro}"></span></div>
+
+        <section class="card">
+            <div class="card-header">
+                <h2><i class="fas fa-crosshairs"></i> Lançar missão</h2>
+                <a th:href="@{/mapa}" class="btn-mini btn-editar"><i class="fas fa-map-location-dot"></i> Ver mapa da semana</a>
+            </div>
+
+            <form th:action="@{/admin/missoes/salvar}" method="post" class="grade-form">
+                <div class="inteiro">
+                    <label class="chave-urgente">
+                        <input type="checkbox" name="ultimaHora" value="true">
+                        <i class="fas fa-triangle-exclamation"></i>
+                        <span><strong>Missão de última hora</strong> — aparece em alerta vermelho no painel e no mapa</span>
+                    </label>
+                </div>
+                <div class="inteiro">
+                    <label for="titulo">Missão</label>
+                    <input type="text" id="titulo" name="titulo" maxlength="120" required placeholder="Ex.: Escolta de material, Guarda do paiol">
+                </div>
+                <div>
+                    <label for="data">Data</label>
+                    <input type="date" id="data" name="data" th:value="${hoje}" th:min="${hoje}" required>
+                </div>
+                <div>
+                    <label for="horario">Horário</label>
+                    <input type="time" id="horario" name="horario">
+                </div>
+                <div>
+                    <label for="local">Local</label>
+                    <input type="text" id="local" name="local" maxlength="120" placeholder="Ex.: Portão principal">
+                </div>
+                <div class="inteiro">
+                    <label for="descricao">Instruções</label>
+                    <textarea id="descricao" name="descricao" maxlength="1000" placeholder="Uniforme, armamento, ponto de encontro..."></textarea>
+                </div>
+                <div class="inteiro">
+                    <label>Militares escalados</label>
+                    <div class="escolha-militares">
+                        <label th:each="m : ${militares}" th:classappend="${m.status != 'APTO'} ? 'indisponivel'">
+                            <input type="checkbox" name="militaresIds" th:value="${m.id}">
+                            <span th:text="${m.graduacao + ' ' + m.nomeGuerra}">Sgt Silva</span>
+                            <small th:if="${m.status != 'APTO'}" th:text="${m.status}">AFASTADO</small>
+                        </label>
+                    </div>
+                    <p style="margin: 0.5rem 0 0; font-size: 0.82rem; color: var(--texto-suave);">
+                        <i class="fas fa-circle-info"></i> Quem estiver em missão no dia sai da permanência daquele dia automaticamente.
+                    </p>
+                </div>
+                <div class="inteiro" style="display: flex; justify-content: flex-end;">
+                    <button type="submit" class="btn-primary"><i class="fas fa-flag-checkered"></i> Lançar missão</button>
+                </div>
+            </form>
+        </section>
+
+        <section class="card">
+            <div class="card-header">
+                <h2><i class="fas fa-calendar-check"></i> Próximas missões</h2>
+            </div>
+            <div class="tabela-rolagem" th:if="${!#lists.isEmpty(proximas)}">
+                <table class="escala-table">
+                    <thead>
+                        <tr><th>Quando</th><th>Missão</th><th>Escalados</th><th style="text-align: center;">Ação</th></tr>
+                    </thead>
+                    <tbody>
+                        <tr th:each="mi : ${proximas}">
+                            <td style="white-space: nowrap;">
+                                <strong th:text="${mi.hoje ? 'Hoje' : #temporals.format(mi.data, 'dd/MM/yyyy')}">Hoje</strong>
+                                <div th:if="${mi.horario != null}" th:text="${#temporals.format(mi.horario, 'HH:mm')}" style="color: var(--texto-suave);">08:00</div>
+                            </td>
+                            <td>
+                                <strong th:text="${mi.titulo}">Escolta</strong>
+                                <span th:if="${mi.ultimaHora}" class="badge badge-afastado" style="min-width: 0; margin-left: 0.35rem;">Última hora</span>
+                                <div th:if="${mi.local != null and !#strings.isEmpty(mi.local)}" style="font-size: 0.85rem; color: var(--texto-suave);">
+                                    <i class="fas fa-location-dot"></i> <th:block th:text="${mi.local}"></th:block></div>
+                                <div th:if="${mi.descricao != null and !#strings.isEmpty(mi.descricao)}" th:text="${mi.descricao}"
+                                     style="font-size: 0.85rem; color: var(--texto-suave); white-space: pre-line;"></div>
+                            </td>
+                            <td th:text="${mi.nomesMilitares}">Cb Duarte</td>
+                            <td style="text-align: center;">
+                                <form th:action="@{/admin/missoes/excluir/{id}(id=${mi.id})}" method="post"
+                                      onsubmit="return confirm('Cancelar esta missão?');">
+                                    <button type="submit" class="btn-perigo-mini"><i class="fas fa-xmark"></i> Cancelar</button>
+                                </form>
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+            <div class="vazio-suave" th:if="${#lists.isEmpty(proximas)}">Nenhuma missão programada.</div>
+        </section>
+
+        <section class="card" th:if="${!#lists.isEmpty(recentes)}">
+            <div class="card-header">
+                <h2><i class="fas fa-clock-rotate-left"></i> Missões recentes</h2>
+            </div>
+            <div class="tabela-rolagem">
+                <table class="escala-table">
+                    <thead><tr><th>Data</th><th>Missão</th><th>Escalados</th></tr></thead>
+                    <tbody>
+                        <tr th:each="mi : ${recentes}" style="opacity: 0.75;">
+                            <td th:text="${#temporals.format(mi.data, 'dd/MM/yyyy')}">10/11/2026</td>
+                            <td th:text="${mi.titulo}">Escolta</td>
+                            <td th:text="${mi.nomesMilitares}">Cb Duarte</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </section>
+    </main>
+
+    <footer th:replace="~{fragments/layout :: rodape}"></footer>
+</body>
+</html>

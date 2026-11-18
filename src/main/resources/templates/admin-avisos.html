@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html lang="pt-br" xmlns:th="http://www.thymeleaf.org"
+      xmlns:sec="http://www.thymeleaf.org/extras/spring-security">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin - Avisos da Semana</title>
+    <th:block th:replace="~{fragments/layout :: recursos}"></th:block>
+</head>
+<body>
+    <div th:replace="~{fragments/layout :: fundo}"></div>
+    <header th:replace="~{fragments/layout :: cabecalho('avisos')}"></header>
+
+    <main class="main-container" style="max-width: 1000px;">
+
+        <div th:if="${mensagem != null}" class="flash flash-ok"><i class="fas fa-circle-check"></i> <span th:text="${mensagem}"></span></div>
+        <div th:if="${erro != null}" class="flash flash-erro"><i class="fas fa-circle-exclamation"></i> <span th:text="${erro}"></span></div>
+
+        <section class="card">
+            <div class="card-header">
+                <h2><i class="fas fa-bullhorn"></i> Publicar aviso</h2>
+            </div>
+            <form th:action="@{/admin/avisos/salvar}" method="post" class="grade-form">
+                <div class="inteiro">
+                    <label for="titulo">Título</label>
+                    <input type="text" id="titulo" name="titulo" maxlength="120" required placeholder="Ex.: Formatura geral sexta-feira">
+                </div>
+                <div class="inteiro">
+                    <label for="mensagem">Mensagem</label>
+                    <textarea id="mensagem" name="mensagem" maxlength="1000" placeholder="Detalhes: horário, uniforme, local..."></textarea>
+                </div>
+                <div>
+                    <label for="prioridade">Prioridade</label>
+                    <select id="prioridade" name="prioridade">
+                        <option th:each="p : ${prioridades}" th:value="${p}" th:text="${p.rotulo}">Normal</option>
+                    </select>
+                </div>
+                <div>
+                    <label for="dataInicio">Mostrar de</label>
+                    <input type="date" id="dataInicio" name="dataInicio" th:value="${hoje}" required>
+                </div>
+                <div>
+                    <label for="dataFim">Até</label>
+                    <input type="date" id="dataFim" name="dataFim" th:value="${fimDaSemana}" required>
+                </div>
+                <div class="inteiro" style="display: flex; justify-content: flex-end;">
+                    <button type="submit" class="btn-primary"><i class="fas fa-paper-plane"></i> Publicar aviso</button>
+                </div>
+            </form>
+        </section>
+
+        <section class="card">
+            <div class="card-header">
+                <h2><i class="fas fa-list"></i> Avisos publicados</h2>
+            </div>
+            <div class="tabela-rolagem" th:if="${!#lists.isEmpty(avisos)}">
+                <table class="escala-table">
+                    <thead>
+                        <tr>
+                            <th>Aviso</th>
+                            <th>Prioridade</th>
+                            <th>Período</th>
+                            <th>Situação</th>
+                            <th style="text-align: center;">Ação</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr th:each="aviso : ${avisos}">
+                            <td>
+                                <strong th:text="${aviso.titulo}">Formatura</strong>
+                                <div th:if="${aviso.mensagem != null}" th:text="${aviso.mensagem}"
+                                     style="font-size: 0.85rem; color: var(--texto-suave); max-width: 380px; white-space: pre-line;"></div>
+                            </td>
+                            <td><span class="tag-prioridade" th:classappend="${aviso.prioridade}" th:text="${aviso.prioridade.rotulo}">Normal</span></td>
+                            <td th:text="${#temporals.format(aviso.dataInicio, 'dd/MM/yyyy') + ' a ' + #temporals.format(aviso.dataFim, 'dd/MM/yyyy')}">17/11 a 23/11</td>
+                            <td>
+                                <span th:if="${aviso.isVigenteEm(hoje)}" class="badge badge-apto">No ar</span>
+                                <span th:if="${aviso.dataInicio.isAfter(hoje)}" class="badge badge-info">Agendado</span>
+                                <span th:if="${aviso.dataFim.isBefore(hoje)}" class="badge" style="background:#EEE;color:#777;">Encerrado</span>
+                            </td>
+                            <td style="text-align: center;">
+                                <form th:action="@{/admin/avisos/excluir/{id}(id=${aviso.id})}" method="post"
+                                      onsubmit="return confirm('Remover este aviso?');">
+                                    <button type="submit" class="btn-perigo-mini"><i class="fas fa-trash"></i> Remover</button>
+                                </form>
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+            <div class="vazio-suave" th:if="${#lists.isEmpty(avisos)}">Nenhum aviso publicado ainda.</div>
+        </section>
+    </main>
+
+    <footer th:replace="~{fragments/layout :: rodape}"></footer>
+</body>
+</html>

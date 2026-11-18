@@ -30,7 +30,7 @@ public class SecurityConfig {
                 .requestMatchers("/login").permitAll()
                 // --- MUDANÇA AQUI ---
                 // O Dashboard e a raiz são PÚBLICOS (qualquer um vê)
-                .requestMatchers("/", "/dashboard").permitAll()
+                .requestMatchers("/", "/dashboard", "/mapa").permitAll()
                 // O Admin continua restrito
                 .requestMatchers("/admin/**").hasRole("ADM")
                 // Qualquer outra coisa requer autenticação

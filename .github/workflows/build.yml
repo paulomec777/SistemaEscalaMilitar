@@ -39,6 +39,18 @@ jobs:
           curl -sf http://localhost:8080/dashboard > dashboard.html
           grep -qE "Alves|Barros|Cardoso" dashboard.html
           curl -s -c cookies.txt -o /dev/null -w "%{redirect_url}\n" -d "username=demo&password=demo" http://localhost:8080/login | grep -q dashboard
+          grep -q "Avisos da semana" dashboard.html
+          grep -q "Missão de última hora" dashboard.html
+          curl -sf "http://localhost:8080/mapa" > mapa.html
+          grep -q "Escolta de material" mapa.html
+          curl -sf "http://localhost:8080/mapa?semana=1" > /dev/null
+          curl -sf "http://localhost:8080/mapa?semana=-1" > /dev/null
+          for pagina in admin/missoes admin/avisos admin/troca admin/afastar admin/controle admin/feriados admin/usuarios admin/novo-militar; do
+            curl -sf -b cookies.txt "http://localhost:8080/$pagina" > pagina.html || { echo "Falhou: /$pagina"; exit 1; }
+            grep -q "Gestão" pagina.html || { echo "Sem menu: /$pagina"; exit 1; }
+          done
+          curl -sf -b cookies.txt -o /dev/null -d "titulo=Teste CI&prioridade=URGENTE" http://localhost:8080/admin/avisos/salvar
+          curl -sf "http://localhost:8080/dashboard" | grep -q "Teste CI"
       - name: Log da aplicação
         if: always()
         run: cat app.log || true

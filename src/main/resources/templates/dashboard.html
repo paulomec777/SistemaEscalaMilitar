@@ -278,6 +278,8 @@
             </script>
         </section>
 
+        <section th:replace="~{fragments/layout :: alertaUltimaHora(${ultimaHora})}"></section>
+
         <div th:if="${mensagem != null}" class="aviso-ok">
             <i class="fas fa-circle-check"></i>
             <span th:text="${mensagem}">Operação realizada.</span>
@@ -326,6 +328,34 @@
             <div class="numero ok"><strong th:text="${#lists.size(lista.?[status == 'APTO'])}">9</strong> Aptos</div>
             <div class="numero perigo"><strong th:text="${#lists.size(lista.?[status == 'AFASTADO'])}">1</strong> Afastados</div>
             <div class="numero alerta"><strong th:text="${#lists.size(lista.?[status != 'APTO' and status != 'AFASTADO'])}">1</strong> Serviço externo</div>
+        </section>
+
+        <!-- AVISOS DA SEMANA -->
+        <section class="card">
+            <div class="card-header">
+                <h2><i class="fas fa-bullhorn"></i> Avisos da semana</h2>
+                <div style="display: flex; gap: 0.5rem; flex-wrap: wrap;">
+                    <a th:href="@{/mapa}" class="btn-mini btn-editar"><i class="fas fa-map-location-dot"></i> Mapa da semana</a>
+                    <a sec:authorize="hasRole('ADM')" th:href="@{/admin/avisos}" class="btn-primary"><i class="fas fa-plus"></i> Novo aviso</a>
+                </div>
+            </div>
+            <div class="avisos-grade" th:if="${avisos != null and !#lists.isEmpty(avisos)}">
+                <article th:each="aviso : ${avisos}" class="aviso" th:classappend="${'prioridade-' + aviso.prioridade}">
+                    <div class="aviso-topo">
+                        <h4 th:text="${aviso.titulo}">Formatura geral</h4>
+                        <span class="tag-prioridade" th:classappend="${aviso.prioridade}" th:text="${aviso.prioridade.rotulo}">Normal</span>
+                    </div>
+                    <p th:if="${aviso.mensagem != null}" th:text="${aviso.mensagem}">Sexta às 7h no pátio.</p>
+                    <div class="aviso-rodape">
+                        <span><i class="far fa-calendar"></i>
+                            <th:block th:text="${#temporals.format(aviso.dataInicio, 'dd/MM')}">17/11</th:block><th:block th:if="${aviso.dataFim != aviso.dataInicio}" th:text="${' a ' + #temporals.format(aviso.dataFim, 'dd/MM')}"></th:block></span>
+                        <span th:if="${aviso.autor != null}"><i class="far fa-user"></i> <th:block th:text="${aviso.autor}">root</th:block></span>
+                    </div>
+                </article>
+            </div>
+            <div class="vazio-suave" th:if="${avisos == null or #lists.isEmpty(avisos)}">
+                <i class="far fa-bell-slash"></i> Nenhum aviso para esta semana.
+            </div>
         </section>
 
         <!-- TABELA DE PREVISÃO DA ESCALA -->
