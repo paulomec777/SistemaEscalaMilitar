@@ -96,7 +96,7 @@
             background: var(--latao); color: var(--oliva-900);
         }
         .escalado.reserva .papel { background: #CFE3F1; color: #1F6493; }
-        .escalado .nome { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+        .escalado .nome { font-size: 0.8rem; line-height: 1.2; overflow-wrap: anywhere; }
         .sem-permanencia { font-size: 0.82rem; color: var(--texto-suave); font-style: italic; }
         .feriado-nome { font-size: 0.78rem; color: #8A6A1C; font-weight: 600; }
 
@@ -172,10 +172,16 @@
             border-radius: 999px; background: var(--oliva-900); border: 1px solid var(--latao);
             box-shadow: 0 20px 40px rgba(0,0,0,0.5); color: #fff; font-size: 0.9rem;
         }
+        .barra-salvar[hidden], .painel-efetivo[hidden] { display: none !important; }
         .barra-salvar .btn-primary { border-radius: 999px !important; }
         .botao-descartar { border: 1px solid rgba(255,255,255,0.25); background: none; color: #fff; border-radius: 999px; padding: 0.55rem 0.9rem; cursor: pointer; font: 600 0.85rem var(--fonte); }
         .aviso-mapa { position: fixed; left: 50%; bottom: 5.2rem; transform: translateX(-50%); z-index: 100; padding: 0.6rem 1rem;
             border-radius: 10px; background: #A8322C; color: #fff; font-size: 0.88rem; box-shadow: var(--sombra); }
+
+        .dica-edicao { margin: 0 0 1rem; color: rgba(255,255,255,0.75); font-size: 0.88rem; }
+        .dica-edicao button { border: 1px solid var(--latao); background: rgba(201,165,76,0.15); color: var(--latao-claro);
+            border-radius: 999px; padding: 0.2rem 0.7rem; font: 600 0.85rem var(--fonte); cursor: pointer; }
+        .modo-edicao .dica-edicao { display: none; }
 
         .resumo-semana { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 1rem; margin-bottom: 1.25rem; }
         .resumo-semana div {
@@ -236,6 +242,12 @@
             <button type="button" id="botao-descartar" class="botao-descartar">Descartar</button>
             <button type="submit" class="btn-primary"><i class="fas fa-floppy-disk"></i> Salvar alterações</button>
         </form>
+
+        <div sec:authorize="hasRole('ADM')" class="dica-edicao" id="dica-edicao">
+            <i class="fas fa-hand-pointer"></i> Para mudar quem tira serviço nos próximos dias, clique em
+            <button type="button" onclick="document.getElementById('botao-editar').click()">Editar escala</button>
+            e arraste os militares.
+        </div>
 
         <section class="resumo-semana">
             <div><strong th:text="${totalMissoes}">3</strong> Missões na semana</div>
