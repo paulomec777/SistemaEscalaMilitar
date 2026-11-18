@@ -35,7 +35,9 @@
         .semana-nav a:hover { background: rgba(255, 255, 255, 0.14); }
         .semana-nav .periodo { background: var(--latao); color: var(--oliva-900); border-color: transparent; }
 
-        .legenda { display: flex; flex-wrap: wrap; gap: 1rem; margin: 0 0 1rem; color: rgba(255,255,255,0.7); font-size: 0.82rem; }
+        .barra-mapa { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 0.75rem; margin: 0 0 0.75rem; }
+        .legenda { display: flex; flex-wrap: wrap; gap: 0.4rem 1rem; color: rgba(255,255,255,0.7); font-size: 0.82rem; }
+        .acoes-mapa { display: flex; align-items: center; gap: 0.75rem; margin-left: auto; }
         .legenda i { margin-right: 0.3rem; }
 
         /* ---------- Grade dos 7 dias ---------- */
@@ -96,7 +98,7 @@
             background: var(--latao); color: var(--oliva-900);
         }
         .escalado.reserva .papel { background: #CFE3F1; color: #1F6493; }
-        .escalado .nome { font-size: 0.8rem; line-height: 1.2; overflow-wrap: anywhere; }
+        .escalado .nome { font-size: 0.8rem; line-height: 1.2; overflow-wrap: break-word; word-break: normal; hyphens: none; min-width: 0; }
         .sem-permanencia { font-size: 0.82rem; color: var(--texto-suave); font-style: italic; }
         .feriado-nome { font-size: 0.78rem; color: #8A6A1C; font-weight: 600; }
 
@@ -137,7 +139,7 @@
         .em-missao + .fixado { margin-left: 0.3rem; }
 
         .painel-efetivo {
-            position: sticky; top: 70px; z-index: 50; margin-bottom: 1rem; padding: 0.9rem 1rem;
+            position: sticky; top: 70px; z-index: 50; margin-bottom: 0.75rem; padding: 0.9rem 1rem;
             border-radius: var(--raio); background: rgba(18,22,15,0.94); border: 1px solid rgba(201,165,76,0.45);
             box-shadow: var(--sombra); color: rgba(255,255,255,0.85);
         }
@@ -178,9 +180,7 @@
         .aviso-mapa { position: fixed; left: 50%; bottom: 5.2rem; transform: translateX(-50%); z-index: 100; padding: 0.6rem 1rem;
             border-radius: 10px; background: #A8322C; color: #fff; font-size: 0.88rem; box-shadow: var(--sombra); }
 
-        .dica-edicao { margin: 0 0 1rem; color: rgba(255,255,255,0.75); font-size: 0.88rem; }
-        .dica-edicao button { border: 1px solid var(--latao); background: rgba(201,165,76,0.15); color: var(--latao-claro);
-            border-radius: 999px; padding: 0.2rem 0.7rem; font: 600 0.85rem var(--fonte); cursor: pointer; }
+        .dica-edicao { color: rgba(255,255,255,0.6); font-size: 0.8rem; }
         .modo-edicao .dica-edicao { display: none; }
 
         .resumo-semana { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 1rem; margin-bottom: 1.25rem; }
@@ -210,15 +210,42 @@
                       th:text="${#temporals.format(segunda, 'dd/MM') + ' a ' + #temporals.format(domingo, 'dd/MM')}">17/11 a 23/11</span>
                 <a th:if="${semana != 0}" th:href="@{/mapa}"><i class="fas fa-calendar-day"></i> Esta semana</a>
                 <a th:href="@{/mapa(semana=${semana + 1})}">Próxima <i class="fas fa-chevron-right"></i></a>
-                <button sec:authorize="hasRole('ADM')" type="button" id="botao-editar" class="botao-editar">
-                    <i class="fas fa-pen-to-square"></i> <span>Editar escala</span>
-                </button>
             </nav>
         </section>
 
         <div th:replace="~{fragments/layout :: mensagens}"></div>
 
         <section th:replace="~{fragments/layout :: alertaUltimaHora(${ultimaHora})}"></section>
+
+        <form sec:authorize="hasRole('ADM')" id="form-ajustes" th:action="@{/admin/mapa/salvar}" method="post" class="barra-salvar" hidden>
+            <input type="hidden" name="semana" th:value="${semana}">
+            <span id="contador-pendentes"><i class="fas fa-pen"></i> 0 alterações</span>
+            <button type="button" id="botao-descartar" class="botao-descartar">Descartar</button>
+            <button type="submit" class="btn-primary"><i class="fas fa-floppy-disk"></i> Salvar alterações</button>
+        </form>
+
+        <section class="resumo-semana">
+            <div><strong th:text="${totalMissoes}">3</strong> Missões na semana</div>
+            <div><strong th:text="${#lists.size(dias.?[expediente])}">5</strong> Dias de expediente</div>
+            <div><strong th:text="${#lists.size(avisos)}">2</strong> Avisos ativos</div>
+        </section>
+
+        <!-- Barra colada no mapa: legenda + edição (o botão e o efetivo só aparecem para o ADM) -->
+        <div class="barra-mapa">
+            <div class="legenda">
+                <span><i class="fas fa-square" style="color: var(--latao)"></i>T = titular da permanência</span>
+                <span><i class="fas fa-square" style="color: #9CCBEA"></i>R = reserva</span>
+                <span><i class="fas fa-square" style="color: var(--perigo)"></i>Missão de última hora</span>
+                <span><i class="fas fa-crosshairs" style="color: var(--perigo)"></i>Escalado também em missão (continua na permanência)</span>
+                <span><i class="fas fa-circle-info"></i>Dias futuros são uma previsão e mudam com trocas e afastamentos</span>
+            </div>
+            <div sec:authorize="hasRole('ADM')" class="acoes-mapa">
+                <span class="dica-edicao">Arraste militares para mudar os próximos dias</span>
+                <button type="button" id="botao-editar" class="botao-editar">
+                    <i class="fas fa-pen-to-square"></i> <span>Editar escala</span>
+                </button>
+            </div>
+        </div>
 
         <!-- Modo edição: o ADM arrasta militares para os dias (de amanhã em diante) -->
         <section sec:authorize="hasRole('ADM')" class="painel-efetivo" id="painel-efetivo" hidden>
@@ -235,33 +262,6 @@
                 </span>
             </div>
         </section>
-
-        <form sec:authorize="hasRole('ADM')" id="form-ajustes" th:action="@{/admin/mapa/salvar}" method="post" class="barra-salvar" hidden>
-            <input type="hidden" name="semana" th:value="${semana}">
-            <span id="contador-pendentes"><i class="fas fa-pen"></i> 0 alterações</span>
-            <button type="button" id="botao-descartar" class="botao-descartar">Descartar</button>
-            <button type="submit" class="btn-primary"><i class="fas fa-floppy-disk"></i> Salvar alterações</button>
-        </form>
-
-        <div sec:authorize="hasRole('ADM')" class="dica-edicao" id="dica-edicao">
-            <i class="fas fa-hand-pointer"></i> Para mudar quem tira serviço nos próximos dias, clique em
-            <button type="button" onclick="document.getElementById('botao-editar').click()">Editar escala</button>
-            e arraste os militares.
-        </div>
-
-        <section class="resumo-semana">
-            <div><strong th:text="${totalMissoes}">3</strong> Missões na semana</div>
-            <div><strong th:text="${#lists.size(dias.?[expediente])}">5</strong> Dias de expediente</div>
-            <div><strong th:text="${#lists.size(avisos)}">2</strong> Avisos ativos</div>
-        </section>
-
-        <div class="legenda">
-            <span><i class="fas fa-square" style="color: var(--latao)"></i>T = titular da permanência</span>
-            <span><i class="fas fa-square" style="color: #9CCBEA"></i>R = reserva</span>
-            <span><i class="fas fa-square" style="color: var(--perigo)"></i>Missão de última hora</span>
-            <span><i class="fas fa-crosshairs" style="color: var(--perigo)"></i>Escalado também em missão (continua na permanência)</span>
-            <span><i class="fas fa-circle-info"></i>Dias futuros são uma previsão e mudam com trocas e afastamentos</span>
-        </div>
 
         <section class="semana-grade">
             <article th:each="dia : ${dias}" class="dia"
